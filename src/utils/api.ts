@@ -1,6 +1,6 @@
 import { makeItMonday } from "./utils";
 
-export type Pair = {num: number, text: string};
+export type Pair = {num: number, subject: string, aud?: string, teachers?: {url: string, name: string}[], groups?: string[]};
 export type Day = {date: Date, pairs: Pair[]};
 
 export class Api{
@@ -10,58 +10,57 @@ export class Api{
         this.baseUrl = baseUrl;
     }
 
-    async getGroupPairs(target: string, date: string, week = false){
+    async getGroups(){
+        return await this.makeRequest<{faculty: string, groups: {id: number, name: string}[]}[]>('getGroups');
+    }
+
+    async getTeachers(){
+        return await this.makeRequest<{id: number, name: string, url: string}[]>('getTeachers');
+    }
+
+    async getGroupPairs(target: number, date: string, week = false){
         return await this.getPairs(target, date, week, 'getPairs.group');
     }
 
-    async searchPairs(target: string, date: string, week = false){
-        return await this.getPairs(target, date, week, 'getPairs.query');
+    async getTeacherPairs(target: number, date: string, week = false){
+        return await this.getPairs(target, date, week, 'getPairs.teacher');
     }
 
-    async getPairs(target: string, date: string, week = false, method: 'getPairs.group' | 'getPairs.query'){
-        const res = await this.makeRequest<{date: string, pairs: {num: string, text: string}[]}[]>(method, {
+    async getPairs(target: number, date: string, week = false, method: 'getPairs.group' | 'getPairs.teacher'){
+        const res = await this.makeRequest<{date: string, pairs: Pair[]}[]>(method, {
             date: (week) ? makeItMonday(date) : date,
             target,
             week: (week) ? '1' : '0',
         });
-        
-        if(!res.ok){
-            throw new Error(res.error);
-        }
 
-        const rawDays = res.result.map((v) => (
+        const days = res.map((v) => (
             {
                 date: new Date(v.date),
-                pairs: v.pairs.map((pair) => (
-                    {
-                        num: +pair.num,
-                        text: pair.text,
-                    }
-                )),
+                pairs: v.pairs,
             }
         )) as Day[];
-        
-        // console.log(rawDays.map((day) => {
-        //     return day.pairs.map((pair) => {
-        //         return pairParser(pair);
-        //     });
-        // }));
 
-        return rawDays;
+        return days;
     }
 
-    async makeRequest<T>(method: string, params: object){
+    async makeRequest<T>(method: string, params?: object){
         const url = new URL(this.baseUrl);
         url.searchParams.append('method', method);
-        Object.entries(params).forEach((v) => url.searchParams.append(v[0], v[1]));
+        if(params){
+            Object.entries(params).forEach((v) => url.searchParams.append(v[0], v[1]));
+        }
 
         const res = await fetch(url);
-        const json = await res.json();
-
-        return json as {
+        const json = await res.json() as {
             ok: boolean,
             result: T,
-            error: any,
+            error: unknown,
         };
+
+        if(!json.ok){
+            throw new Error(String(json.error));
+        }
+
+        return json.result;
     }
 }

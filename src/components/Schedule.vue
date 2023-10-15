@@ -5,25 +5,47 @@ import { formatDate, times } from '../utils/utils';
 
 const props = defineProps<{
     days: Day[],
-    title: string,
 }>();
 
 const fulfilledDays = computed(() => {
-    const days = props.days.slice();
-    days.forEach((day) => {
-        let newPairs = [];
+    let days = [] as {date: Date, data: string[][]}[];
+    props.days.forEach((day) => {
+        let data = new Array<string[]>(5);
+
         day.pairs.forEach(pair => {
-            newPairs[pair.num - 1] = pair;
+            let addit = '';
+            if(pair.groups){
+                addit = pair.groups.map(v => v.toLocaleUpperCase()).join(', ');
+            }else if(pair.teachers){
+                addit = pair.teachers.map(v => {
+                    const [st, nd, rd] = v.name.replace(/ *\(.*?\) */g, ' ').split(' ');
+                    const name = `${st} ${nd[0]}.${rd[0]}.`;
+
+                    let code = name;
+                    if(v.url){
+                        code = `<a href="${v.url}" target="_blank">${code}</a>`;
+                    }
+
+                    return code;
+                }).join(', ');
+            }
+
+            data[pair.num - 1] = [
+                pair.subject,
+                pair.aud || '',
+                addit || '',
+            ];
         });
 
         for (let i = 0; i < 5; i++) {
-            if (newPairs[i]) {
+            if (data[i]) {
                 continue;
             }
 
-            newPairs[i] = { num: i + 1, text: '-' };
+            data[i] = ['-', '', ''];
         }
-        day.pairs = newPairs;
+
+        days.push({date: day.date, data});
     });
 
     return days;
@@ -32,30 +54,24 @@ const fulfilledDays = computed(() => {
 
 <template>
     <div class="container-fluid">
-        <div class="row">
-            <div class="col" style="text-align: center;">
-                <h3>{{ props.title }}</h3>
-            </div>
-        </div>
-
         <div class="schedule-row row">
-            <div class="schedule-col col" v-for="day in fulfilledDays">
+            <div class="schedule-col" v-for="day in fulfilledDays">
                 <h4>{{ formatDate(day.date) }}</h4>
                 <table class="table">
-                    <thead>
-                        <tr>
-                            <th class="w-18">№</th>
-                            <th>Предмет</th>
-                        </tr>
-                    </thead>
                     <tbody>
-                        <tr v-for="pair in day.pairs">
-                            <td class="legend">
-                                <p>{{ pair.num }} пара</p>
-                                <p class="time-text" v-html="times[pair.num - 1]"></p>
+                        <tr v-for="(row, i) in day.data">
+                            <td class="legend w-18">
+                                <p>{{ i + 1 }} пара</p>
+                                <p class="time-text" v-html="times[i]"></p>
+                            </td>
+                            <td style="width: 40%;">
+                                <p v-html="row[0]"></p>
                             </td>
                             <td>
-                                <p>{{ pair.text }}</p>
+                                <p v-html="row[1]"></p>
+                            </td>
+                            <td>
+                                <p v-html="row[2]"></p>
                             </td>
                         </tr>
                     </tbody>
@@ -93,13 +109,14 @@ const fulfilledDays = computed(() => {
 }
 
 td:nth-child(1)>p {
+    display: block;
     border-right: 1px solid #ddd;
 }
 
-td:nth-child(2)>p {
+td>p {
     display: flex;
     align-items: center;
-    margin: 0;
+    margin-bottom: 0;
 }
 
 td {
