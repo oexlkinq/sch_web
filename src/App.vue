@@ -5,25 +5,28 @@ import Schedule from './components/Schedule.vue';
 import Select3 from './components/Select3.vue';
 
 import { jsPDF } from 'jspdf';
-import {dejavu} from './fonts';
+// import { dejavu , arial, helvetica_neue, helvetica } from './fonts';
+import { loadFontAsBase64, fonts } from './utils/fonts';
 
-const api = new Api('http://shebot.shgpi/sch_api/index.php');
+import { datalists } from './utils/consts';
 
-const datalists = await (async () => {
-	const [group, teacher] = await Promise.all([
-		api.getGroups(),
-		api.getTeachers(),
-	]);
+const api = new Api('https://shgpi.edu.ru/sch_api/index.php');
 
-	return { group, teacher };
-})();
+// const datalists = await (async () => {
+// 	const [group, teacher] = await Promise.all([
+// 		api.getGroups(),
+// 		api.getTeachers(),
+// 	]);
+
+// 	return { group, teacher };
+// })();
 
 
 const date = ref((new Date()).toLocaleDateString('en-ca'));
 const schedule = ref<Day[]>();
 const week = ref(true);
 
-const targetType = ref<'group' | 'teacher'>(localStorage.targetType ?? 'group');
+const targetType = ref<'group' | 'query'>(localStorage.targetType ?? 'group');
 const target = ref((!isNaN(+localStorage.target)) ? +localStorage.target : undefined);
 
 const facultyIndex = ref((!isNaN(+localStorage.facultyIndex)) ? +localStorage.facultyIndex : undefined);
@@ -44,17 +47,17 @@ const states = {
 		placeholder: 'Группа',
 		datalist: datalists.group,
 		apiHandler: api.getGroupPairs.bind(api),
-		titleGenerator: () => `${datalists.group[facultyIndex.value ?? -1].faculty}, ${datalists.group[facultyIndex.value ?? -1].groups[target.value ?? -1].name} группа`,
+		titleGenerator: () => `${datalists.group[facultyIndex.value ?? -1].title}, ${datalists.group[facultyIndex.value ?? -1].list[target.value ?? -1]} группа`,
 	},
-	'teacher': {
+	'query': {
 		title: 'Для преподавателей',
 		placeholder: 'ФИО преподавателя',
-		datalist: datalists.teacher,
-		apiHandler: api.getTeacherPairs.bind(api),
+		datalist: datalists.query,
+		apiHandler: api.searchPairs.bind(api),
 		titleGenerator: () => {
-			let nameCode = datalists.teacher[target.value ?? -1].name;
+			let nameCode = datalists.query[target.value ?? -1][0];
 			
-			const url = datalists.teacher[target.value ?? -1].url;
+			const url = datalists.query[target.value ?? -1][2];
 			if(url){
 				nameCode = `<a href="${url}" target="_blank" style="font-size: 24px;">${nameCode}</a>`
 			}
@@ -84,9 +87,9 @@ async function updateRes() {
 		error.value = '';
 
 		if(targetType.value === 'group'){
-			schedule.value = await states[targetType.value].apiHandler(datalists.group[facultyIndex.value ?? -1].groups[target.value].id, date.value, week.value);
-		}else if(targetType.value === 'teacher'){
-			schedule.value = await states[targetType.value].apiHandler(datalists.teacher[target.value].id, date.value, week.value);
+			schedule.value = await states[targetType.value].apiHandler(datalists.group[facultyIndex.value ?? -1].list[target.value], date.value, week.value);
+		}else if(targetType.value === 'query'){
+			schedule.value = await states[targetType.value].apiHandler(datalists.query[target.value][1], date.value, week.value);
 		}
 	} catch (e) {
 		console.log(e);
@@ -96,20 +99,36 @@ async function updateRes() {
 	}
 }
 
+const makePdfState = ref<'processing' | 'idle'>('idle');
 async function makePdf(){
 	const scheduleBody = document.getElementById('scheduleBody');
-	console.log(scheduleBody);
 	if(!scheduleBody){
 		return;
 	}
 
-	const doc = new jsPDF({unit: 'mm'});
-	doc.addFileToVFS('sans-serif.ttf', dejavu);
-	doc.addFont('sans-serif.ttf', 'sans-serif', 'normal');
-	doc.setFont('sans-serif');
-	doc.html(scheduleBody, {callback: (doc) => {
-		doc.save('Расписание');
-	}, x: 10, y: 10, width: 190, windowWidth: 1200});
+	makePdfState.value = 'processing';
+	
+	try{
+		const doc = new jsPDF({unit: 'mm'});
+		
+		await Promise.all(fonts.map(async ([file, path]) => {
+			const font = await loadFontAsBase64(path);
+		
+			doc.addFileToVFS(file, font);
+			doc.addFont(file, file, 'normal');
+		}));
+	
+		const pdf = await new Promise((res) => {
+			doc.html(scheduleBody, {callback: res, x: 10, y: 10, width: 190, windowWidth: 1200});
+		}) as jsPDF;
+	
+		pdf.save('Расписание');
+	}catch(e){
+		console.error(e);
+		alert('Произошла ошибка');
+	}finally{
+		makePdfState.value = 'idle';
+	}
 }
 </script>
 
@@ -123,8 +142,8 @@ async function makePdf(){
 							@click="targetType = 'group'">Для студентов</button>
 					</div>
 					<div class="col-xs-12 col-md-12">
-						<button :class="{ 'active': targetType === 'teacher' }" class="btn toggle"
-							@click="targetType = 'teacher'">Для преподавателей</button>
+						<button :class="{ 'active': targetType === 'query' }" class="btn toggle"
+							@click="targetType = 'query'">Для преподавателей</button>
 					</div>
 				</div>
 			</div>
@@ -133,19 +152,19 @@ async function makePdf(){
 				<div class="row">
 					<template v-if="targetType === 'group'">
 						<div class="col-xs-12 col-md-9">
-							<Select3 :datalist="datalists.group.map((v, i) => ({ id: i, value: v.faculty }))"
+							<Select3 :datalist="datalists.group.map((v, i) => ({ id: i, value: v.title }))"
 								v-model:id="facultyIndex" placeholder="Институт, факультет, колледж" />
 						</div>
 
 						<div class="col-xs-12 col-md-3">
 							<Select3
-								:datalist="datalists.group[facultyIndex ?? -1]?.groups.map((v, i) => ({ id: i, value: v.name.toLocaleUpperCase() }))"
+								:datalist="datalists.group[facultyIndex ?? -1]?.list.map((v, i) => ({ id: i, value: v.toLocaleUpperCase() }))"
 								v-model:id="target" :placeholder="states[targetType].placeholder" />
 						</div>
 					</template>
 
-					<div class="col-xs-12 col-md-6 col-lg-12" v-else-if="targetType === 'teacher'">
-						<Select3 :datalist="datalists.teacher.map((v, i) => ({ id: i, value: v.name }))" v-model:id="target"
+					<div class="col-xs-12 col-md-6 col-lg-12" v-else-if="targetType === 'query'">
+						<Select3 :datalist="datalists.query.map((v, i) => ({ id: i, value: v[0] }))" v-model:id="target"
 							:placeholder="states[targetType].placeholder" />
 					</div>
 				</div>
@@ -176,13 +195,16 @@ async function makePdf(){
 		</div>
 
 		<template v-if="schedule && schedule.length > 0">
-			<div id="scheduleBody" style="font-family: sans-serif;">
+			<div id="scheduleBody">
 				<h3 style="text-align: center;" v-html="states[targetType].titleGenerator()"></h3>
 
 				<Schedule :days="schedule" />
 			</div>
 
-			<button class="btn btn-primary w-100" @click="makePdf">Сохранить</button>
+			<button class="btn btn-primary w-100" @click="makePdf">
+				<div class="spinner-border spinner-border-sm" v-if="makePdfState === 'processing'"></div>
+				Сохранить
+			</button>
 		</template>
 
 		<div class="row" v-else-if="schedule && schedule.length === 0">
@@ -200,6 +222,10 @@ async function makePdf(){
 </template>
 
 <style scoped>
+#scheduleBody{
+	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
 .row {
 	margin-top: 0.5rem;
 	margin-bottom: 0.5rem;

@@ -13,28 +13,32 @@ const fulfilledDays = computed(() => {
         let data = new Array<string[]>(5);
 
         day.pairs.forEach(pair => {
-            let addit = '';
-            if(pair.groups){
-                addit = pair.groups.map(v => v.toLocaleUpperCase()).join(', ');
-            }else if(pair.teachers){
-                addit = pair.teachers.map(v => {
-                    const [st, nd, rd] = v.name.replace(/ *\(.*?\) */g, ' ').split(' ');
-                    const name = `${st} ${nd[0]}.${rd[0]}.`;
+            // let addit = '';
+            // if(pair.groups){
+            //     addit = pair.groups.map(v => v.toLocaleUpperCase()).join(', ');
+            // }else if(pair.teachers){
+            //     addit = pair.teachers.map(v => {
+            //         const [st, nd, rd] = v.name.replace(/ *\(.*?\) */g, ' ').split(' ');
+            //         const name = `${st} ${nd[0]}.${rd[0]}.`;
 
-                    let code = name;
-                    if(v.url){
-                        code = `<a href="${v.url}" target="_blank">${code}</a>`;
-                    }
+            //         let code = name;
+            //         if(v.url){
+            //             code = `<a href="${v.url}" target="_blank">${code}</a>`;
+            //         }
 
-                    return code;
-                }).join(', ');
+            //         return code;
+            //     }).join(', ');
+            // }
+
+            if(data[pair.num - 1]){
+                data[pair.num - 1] = [
+                    data[pair.num - 1][0] + '<br>' + pair.text,
+                ];
+            }else{
+                data[pair.num - 1] = [
+                    pair.text,
+                ];
             }
-
-            data[pair.num - 1] = [
-                pair.subject,
-                pair.aud || '',
-                addit || '',
-            ];
         });
 
         for (let i = 0; i < 5; i++) {
@@ -42,7 +46,7 @@ const fulfilledDays = computed(() => {
                 continue;
             }
 
-            data[i] = ['-', '', ''];
+            data[i] = ['-'];
         }
 
         days.push({date: day.date, data});
@@ -64,14 +68,8 @@ const fulfilledDays = computed(() => {
                                 <p>{{ i + 1 }} пара</p>
                                 <p class="time-text" v-html="times[i]"></p>
                             </td>
-                            <td style="width: 40%;">
+                            <td>
                                 <p v-html="row[0]"></p>
-                            </td>
-                            <td>
-                                <p v-html="row[1]"></p>
-                            </td>
-                            <td>
-                                <p v-html="row[2]"></p>
                             </td>
                         </tr>
                     </tbody>

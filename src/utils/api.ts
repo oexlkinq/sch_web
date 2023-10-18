@@ -1,6 +1,6 @@
 import { makeItMonday } from "./utils";
 
-export type Pair = {num: number, subject: string, aud?: string, teachers?: {url: string, name: string}[], groups?: string[]};
+export type Pair = {num: number, text: string};
 export type Day = {date: Date, pairs: Pair[]};
 
 export class Api{
@@ -10,23 +10,23 @@ export class Api{
         this.baseUrl = baseUrl;
     }
 
-    async getGroups(){
-        return await this.makeRequest<{faculty: string, groups: {id: number, name: string}[]}[]>('getGroups');
-    }
+    // async getGroups(){
+    //     return await this.makeRequest<{faculty: string, groups: {id: number, name: string}[]}[]>('getGroups');
+    // }
 
-    async getTeachers(){
-        return await this.makeRequest<{id: number, name: string, url: string}[]>('getTeachers');
-    }
+    // async getTeachers(){
+    //     return await this.makeRequest<{id: number, name: string, url: string}[]>('getTeachers');
+    // }
 
-    async getGroupPairs(target: number, date: string, week = false){
+    async getGroupPairs(target: string, date: string, week = false){
         return await this.getPairs(target, date, week, 'getPairs.group');
     }
 
-    async getTeacherPairs(target: number, date: string, week = false){
-        return await this.getPairs(target, date, week, 'getPairs.teacher');
+    async searchPairs(target: string, date: string, week = false){
+        return await this.getPairs(target, date, week, 'getPairs.query');
     }
 
-    async getPairs(target: number, date: string, week = false, method: 'getPairs.group' | 'getPairs.teacher'){
+    async getPairs(target: string, date: string, week = false, method: 'getPairs.group' | 'getPairs.query'){
         const res = await this.makeRequest<{date: string, pairs: Pair[]}[]>(method, {
             date: (week) ? makeItMonday(date) : date,
             target,
