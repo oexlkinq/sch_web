@@ -35,3 +35,13 @@ body {
 	--bs-spinner-height: 1rem;
 	--bs-spinner-border-width: 0.2em;
 }
+
+.w-100 {
+	width: 100%;
+}
+
+.center-children {
+	display: flex;
+	justify-content: center;
+	align-content: center;
+}

@@ -10,28 +10,42 @@ export class Api{
         this.baseUrl = baseUrl;
     }
 
-    // async getGroups(){
-    //     return await this.makeRequest<{faculty: string, groups: {id: number, name: string}[]}[]>('getGroups');
-    // }
-
-    // async getTeachers(){
-    //     return await this.makeRequest<{id: number, name: string, url: string}[]>('getTeachers');
-    // }
-
-    async getGroupPairs(target: string, date: string, week = false){
-        return await this.getPairs(target, date, week, 'getPairs.group');
+    async getGroups(){
+        return await this.makeRequest<{faculty: string, groups: {id: number, name: string}[]}[]>('groups.get');
     }
 
-    async searchPairs(target: string, date: string, week = false){
-        return await this.getPairs(target, date, week, 'getPairs.query');
+    async getTeachers(){
+        return await this.makeRequest<{id: number, name: string, url: string}[]>('teachers.get');
     }
 
-    async getPairs(target: string, date: string, week = false, method: 'getPairs.group' | 'getPairs.query'){
-        const res = await this.makeRequest<{date: string, pairs: Pair[]}[]>(method, {
-            date: (week) ? makeItMonday(date) : date,
-            target,
-            week: (week) ? '1' : '0',
-        });
+    // async getGroupPairs(target: string, date: string, week = false){
+    //     return await this.getPairs({});
+    // }
+
+    // async searchPairs(target: string, date: string, week = false){
+    //     return await this.getPairs(target, date, week, 'getPairs.query');
+    // }
+
+    async getPairs(options: {
+        date: string,
+        week: boolean,
+
+        teacherId?: number,
+        groupId?: number,
+        query?: string,
+    }){
+        if(!(options.teacherId || options.groupId || options.query)){
+            throw new Error('должен быть указан один параметр');
+        }
+
+        const res = await this.makeRequest<{date: string, pairs: Pair[]}[]>('pairs.get', Object.assign(
+            {},
+            options,
+            {
+                date: (options.week) ? makeItMonday(options.date) : options.date,
+                week: (options.week) ? '1' : '0',
+            }
+        ));
 
         const days = res.map((v) => (
             {

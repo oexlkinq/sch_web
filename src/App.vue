@@ -1,96 +1,83 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { provide, ref } from 'vue';
 import { Api, Day } from './utils/api.ts';
 import Schedule from './components/Schedule.vue';
-import Select3 from './components/Select3.vue';
 
 import { jsPDF } from 'jspdf';
-// import { dejavu , arial, helvetica_neue, helvetica } from './fonts';
 import { loadFontAsBase64, fonts } from './utils/fonts';
 
-import { datalists } from './utils/consts';
+import { getNumFromLS } from './utils/utils';
 
-const api = new Api('https://shgpi.edu.ru/sch_api/index.php');
 
-// const datalists = await (async () => {
-// 	const [group, teacher] = await Promise.all([
-// 		api.getGroups(),
-// 		api.getTeachers(),
-// 	]);
-
-// 	return { group, teacher };
-// })();
+// TODO: приложить сюда мозг. мб есть более хороший способ организовать это
+const api = new Api((import.meta.env.PROD) ? 'https://shgpi.edu.ru/sch_api/index.php' : 'http://localhost/sch_api/index.php');
+provide('api', api);
 
 
 const date = ref((new Date()).toLocaleDateString('en-ca'));
 const schedule = ref<Day[]>();
+const scheduleTitle = ref<string>();
 const week = ref(true);
 
-const targetType = ref<'group' | 'query'>(localStorage.targetType ?? 'group');
-const target = ref((!isNaN(+localStorage.target)) ? +localStorage.target : undefined);
 
-const facultyIndex = ref((!isNaN(+localStorage.facultyIndex)) ? +localStorage.facultyIndex : undefined);
+import group from './components/cps/group.vue';
+import query from './components/cps/query.vue';
+import teacher from './components/cps/teacher.vue';
 
-watch([targetType], () => {
-	target.value = undefined;
-	facultyIndex.value = -1;
-	schedule.value = undefined;
-});
-
-watch([target], () => {
-	schedule.value = undefined;
-});
-
-const states = {
-	'group': {
+const cps = [
+	{
 		title: 'Для студентов',
-		placeholder: 'Группа',
-		datalist: datalists.group,
-		apiHandler: api.getGroupPairs.bind(api),
-		titleGenerator: () => `${datalists.group[facultyIndex.value ?? -1].title}, ${datalists.group[facultyIndex.value ?? -1].list[target.value ?? -1]} группа`,
+		component: group,
 	},
-	'query': {
+	{
 		title: 'Для преподавателей',
-		placeholder: 'ФИО преподавателя',
-		datalist: datalists.query,
-		apiHandler: api.searchPairs.bind(api),
-		titleGenerator: () => {
-			let nameCode = datalists.query[target.value ?? -1][0];
-			
-			const url = datalists.query[target.value ?? -1][2];
-			if(url){
-				nameCode = `<a href="${url}" target="_blank" style="font-size: 24px;">${nameCode}</a>`
-			}
+		component: teacher,
+	},
+	{
+		title: 'Поиск',
+		component: query,
+	},
+];
 
-			return `Преподаватель ${nameCode}`;
-		},
+
+const cp = ref<InstanceType<typeof group> | InstanceType<typeof teacher> | InstanceType<typeof query>>();
+const currentCpIndex = ref<number>(getNumFromLS('currentCpIndex', 0));
+
+
+let firstCpResolve = true;
+function onCpResolve() {
+	if (firstCpResolve) {
+		firstCpResolve = false;
+
+		return;
 	}
-};
+
+	cp.value?.resetInputs();
+	localStorage.currentCpIndex = currentCpIndex.value;
+}
+
 
 const loading = ref(false);
 const error = ref<string>();
 async function updateRes() {
+	// const cp = ref<InstanceType<typeof group> | InstanceType<typeof teacher> | InstanceType<typeof query>>();
 	try {
 		if (loading.value) {
 			return;
 		}
+
 		loading.value = true;
-
-		if (target.value === undefined) {
-			throw new Error('Неверная цель');
-		}
-
-		localStorage.target = target.value;
-		localStorage.targetType = targetType.value;
-		localStorage.facultyIndex = facultyIndex.value;
-
 		error.value = '';
 
-		if(targetType.value === 'group'){
-			schedule.value = await states[targetType.value].apiHandler(datalists.group[facultyIndex.value ?? -1].list[target.value], date.value, week.value);
-		}else if(targetType.value === 'query'){
-			schedule.value = await states[targetType.value].apiHandler(datalists.query[target.value][1], date.value, week.value);
+
+		if (cp.value === undefined) {
+			return alert('не удалось загрузить панель параметров запроса');
 		}
+
+		schedule.value = await cp.value.fetcher(date.value, week.value);
+		scheduleTitle.value = cp.value.titleGenerator();
+
+		cp.value.saveState();
 	} catch (e) {
 		console.log(e);
 		error.value = String(e);
@@ -99,34 +86,35 @@ async function updateRes() {
 	}
 }
 
-const makePdfState = ref<'processing' | 'idle'>('idle');
-async function makePdf(){
-	const scheduleBody = document.getElementById('scheduleBody');
-	if(!scheduleBody){
-		return;
-	}
 
-	makePdfState.value = 'processing';
-	
-	try{
-		const doc = new jsPDF({unit: 'mm'});
-		
+const makePdfState = ref<'processing' | 'idle'>('idle');
+async function makePdf() {
+	try {
+		const scheduleBody = document.getElementById('scheduleBody');
+		if (!scheduleBody) {
+			return;
+		}
+
+		makePdfState.value = 'processing';
+
+		const doc = new jsPDF({ unit: 'mm' });
+
 		await Promise.all(fonts.map(async ([file, path]) => {
 			const font = await loadFontAsBase64(path);
-		
+
 			doc.addFileToVFS(file, font);
 			doc.addFont(file, file, 'normal');
 		}));
-	
+
 		const pdf = await new Promise((res) => {
-			doc.html(scheduleBody, {callback: res, x: 10, y: 10, width: 190, windowWidth: 1200});
+			doc.html(scheduleBody, { callback: res, x: 10, y: 10, width: 190, windowWidth: 1200 });
 		}) as jsPDF;
-	
+
 		pdf.save('Расписание');
-	}catch(e){
+	} catch (e) {
 		console.error(e);
 		alert('Произошла ошибка');
-	}finally{
+	} finally {
 		makePdfState.value = 'idle';
 	}
 }
@@ -137,36 +125,26 @@ async function makePdf(){
 		<div class="row align-items-center p-slim row-main">
 			<div class="col-xs-12 col-lg-3">
 				<div class="row">
-					<div class="col-xs-12 col-md-12">
-						<button :class="{ 'active': targetType === 'group' }" class="btn toggle"
-							@click="targetType = 'group'">Для студентов</button>
-					</div>
-					<div class="col-xs-12 col-md-12">
-						<button :class="{ 'active': targetType === 'query' }" class="btn toggle"
-							@click="targetType = 'query'">Для преподавателей</button>
+					<div class="col-xs-12 col-md-12" v-for="(cp, i) in cps">
+						<button :class="{ 'active': currentCpIndex === i }" class="btn toggle"
+							@click="currentCpIndex = i">{{ cp.title }}</button>
 					</div>
 				</div>
 			</div>
 
 			<div class="col-xs-12 col-lg-7 mid-col">
 				<div class="row">
-					<template v-if="targetType === 'group'">
-						<div class="col-xs-12 col-md-9">
-							<Select3 :datalist="datalists.group.map((v, i) => ({ id: i, value: v.title }))"
-								v-model:id="facultyIndex" placeholder="Институт, факультет, колледж" />
-						</div>
+					<KeepAlive>
+						<Suspense @resolve="onCpResolve">
+							<component :is="cps[currentCpIndex].component" ref="cp" />
 
-						<div class="col-xs-12 col-md-3">
-							<Select3
-								:datalist="datalists.group[facultyIndex ?? -1]?.list.map((v, i) => ({ id: i, value: v.toLocaleUpperCase() }))"
-								v-model:id="target" :placeholder="states[targetType].placeholder" />
-						</div>
-					</template>
-
-					<div class="col-xs-12 col-md-6 col-lg-12" v-else-if="targetType === 'query'">
-						<Select3 :datalist="datalists.query.map((v, i) => ({ id: i, value: v[0] }))" v-model:id="target"
-							:placeholder="states[targetType].placeholder" />
-					</div>
+							<template #fallback>
+								<div class="center-children">
+									<span class="spinner-border"></span>
+								</div>
+							</template>
+						</Suspense>
+					</KeepAlive>
 				</div>
 
 				<div class="row">
@@ -196,13 +174,13 @@ async function makePdf(){
 
 		<template v-if="schedule && schedule.length > 0">
 			<div id="scheduleBody">
-				<h3 style="text-align: center;" v-html="states[targetType].titleGenerator()"></h3>
+				<h3 style="text-align: center;" v-html="scheduleTitle"></h3>
 
 				<Schedule :days="schedule" />
 			</div>
 
 			<button class="btn btn-primary w-100" @click="makePdf">
-				<div class="spinner-border spinner-border-sm" v-if="makePdfState === 'processing'"></div>
+				<span class="spinner-border spinner-border-sm" v-if="makePdfState === 'processing'"></span>
 				Сохранить
 			</button>
 		</template>
@@ -222,7 +200,7 @@ async function makePdf(){
 </template>
 
 <style scoped>
-#scheduleBody{
+#scheduleBody {
 	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
@@ -230,11 +208,6 @@ async function makePdf(){
 	margin-top: 0.5rem;
 	margin-bottom: 0.5rem;
 }
-
-/* .p-slim>div{
-	padding-left: 10px;
-	padding-right: 10px;
-} */
 
 @media (min-width: 1200px) {
 	.align-items-center {
@@ -271,38 +244,6 @@ async function makePdf(){
 	color: white;
 }
 
-/* ul.nav-priem {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-}
-
-ul.nav-priem li {
-	width: 100%;
-	flex-grow: 1;
-	text-align: center;
-	padding: 0;
-}
-
-.nav-priem a, .navbtn {
-	color: #000;
-	background-color: #eee;
-	border-radius: 0 !important;
-	font-size: 14px;
-	padding: 10px;
-}
-
-.nav-priem a:focus, .navbtn:focus,
-.nav-priem a:hover, .navbtn:hover {
-	background-color: #e7e7e7 !important;
-}
-
-.nav-priem li.active a, .navbtn,
-.nav-priem li.active a:focus, .navbtn:focus,
-.nav-priem li.active a:hover, .navbtn:hover{
-	background-color: var(--shspu-color-dark) !important;
-} */
-
 .btn-primary {
 	background-color: var(--shspu-color-dark) !important;
 }
@@ -316,7 +257,4 @@ ul.nav-priem li {
 	padding: 10px;
 	border: none;
 }
-
-.w-100 {
-	width: 100%;
-}</style>
+</style>

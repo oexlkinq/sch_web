@@ -29,51 +29,8 @@ export const times = [
 	}, '');
 });
 
-// /**
-//  * @returns [подстрока, исходная_строка]
-//  */
-// export function splice(regexp: RegExp, str: string): [string, string | undefined]{
-//     const matchRes = str.match(regexp);
-//     if(!matchRes){
-//         return [str, undefined];
-//     }
+export function getNumFromLS<T>(key: string, initValue: T) {
+    const value = localStorage.getItem(key);
 
-//     const [match] = matchRes;
-    
-//     return [
-//         str.split(match).join(''),
-//         matchRes.slice(1).join(''),
-//     ];
-// }
-
-// export function pairParser(pair: Pair){
-//     let npair = {num: pair.num} as {
-//         num: number,
-//         auditory: string,
-//         name: string,
-//         subject: string,
-//     };
-
-//     let str = pair.text;
-//     for(let func of [
-//         (str: string) => {
-//             const [nstr, auditory] = splice(/(\d{3}) *([абв])/i, str);
-//             npair.auditory = auditory ?? '';
-
-//             return nstr;
-//         },
-//         (str: string) => {
-//             const [nstr, name] = splice(/([А-Я][а-я]+ (?:[А-Я]\.){2})|\(([А-Я][а-я]+)\)/, str);
-//             npair.name = name ?? '';
-    
-//             return nstr;
-//         },
-//         (str: string) => {
-//             return npair.subject = str.replace(/^[\s\\/]*|\s{2,}|[\s\\/]*$/g, '');
-//         }
-//     ]){
-//         str = func(str);
-//     }
-
-//     return npair;
-// }
+    return (value === null) ? initValue : +value;
+}

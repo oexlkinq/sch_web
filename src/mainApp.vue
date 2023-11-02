@@ -4,8 +4,11 @@ import App from './App.vue';
 <template>
     <Suspense>
         <App />
+        
         <template #fallback>
-            Loading...
+            <div class="center-children">
+                <div class="spinner-border"></div>
+            </div>
         </template>
     </Suspense>
 </template>
