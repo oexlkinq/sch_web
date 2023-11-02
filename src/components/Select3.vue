@@ -1,26 +1,23 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="id">
 import { computed, ref } from 'vue';
 import { useFloating, size, autoUpdate } from '@floating-ui/vue';
 
-type strnum = string | number;
-type datalist = { [key: strnum]: strnum }[];
+import { vClickOutside } from '../utils/utils';
+
+type datalist = { id: id, value: string }[];
 
 const props = withDefaults(defineProps<{
     datalist?: datalist,
-    id?: strnum,
-    idKey?: strnum,
-    valueKey?: strnum,
+    id?: id,
     placeholder?: string,
 }>(), {
     datalist: () => [] as datalist,
-    idKey: 'id',
-    valueKey: 'value',
     placeholder: '',
 });
 
 const emits = defineEmits<{
-    (event: 'update:id', id: strnum): void,
-    (event: 'update:value', value: strnum): void,
+    (event: 'update:id', id: id | undefined): void,
+    (event: 'update:value', value: string): void,
 }>();
 
 
@@ -28,52 +25,34 @@ const inputEl = ref<HTMLInputElement>();
 const floating = ref<HTMLDivElement>();
 
 const value = ref<string>('');
-const bindIdIndex = props.datalist.findIndex((v) => v[props.idKey] === props.id);
+const bindIdIndex = props.datalist.findIndex((v) => v.id === props.id);
 if(bindIdIndex !== -1){
-    emits('update:value', props.datalist[bindIdIndex][props.valueKey]);
+    emits('update:value', props.datalist[bindIdIndex].value);
 
-    value.value = String(props.datalist[bindIdIndex][props.valueKey]);
+    value.value = String(props.datalist[bindIdIndex].value);
 }
 
 const datalist = computed(() => {
     return props.datalist.filter((v) => {
         // если поле ввода пустое, то в предлагаемом списке должны оказаться все варианты
-        if (!value.value || String(v[props.valueKey]).toLocaleLowerCase().includes(value.value.toLocaleLowerCase())) {
+        if (!value.value || String(v.value).toLocaleLowerCase().includes(value.value.toLocaleLowerCase())) {
             return true;
         }
     });
 });
 
-const { floatingStyles } = useFloating(inputEl, floating, {
-    middleware: [
-        size({
-            apply({ rects }) {
-                if (floating.value) {
-                    floating.value.style.width = rects.reference.width + 'px';
-                }
-            }
-        })
-    ],
-    whileElementsMounted: autoUpdate,
-});
-
 
 const opened = ref(false);
 
-window.addEventListener('click', (event) => {
-    if (event.target !== inputEl.value && event.target !== floating.value) {
-        hide();
-    }
-})
 function hide() {
     opened.value = false;
     // inputEl.value?.blur();
 }
 function selectIndex(index: number) {
-    emits('update:id', datalist.value[index][props.idKey]);
-    emits('update:value', datalist.value[index][props.valueKey]);
+    emits('update:id', datalist.value[index].id);
+    emits('update:value', datalist.value[index].value);
 
-    value.value = String(datalist.value[index][props.valueKey]);
+    value.value = String(datalist.value[index].value);
 
     hide();
 }
@@ -91,24 +70,37 @@ function oninput(event: KeyboardEvent) {
         return;
     }
 
-    const index = datalist.value.findIndex((v) => value.value === String(v[props.valueKey]));
+    const index = datalist.value.findIndex((v) => value.value === String(v.value));
     if (index !== -1) {
-        emits('update:id', datalist.value[index][props.idKey]);
-        emits('update:value', datalist.value[index][props.valueKey]);
+        emits('update:id', datalist.value[index].id);
+        emits('update:value', datalist.value[index].value);
     } else {
-        emits('update:id', value.value);
+        emits('update:id', undefined);
         emits('update:value', value.value);
     }
 }
 
+
+const { floatingStyles } = useFloating(inputEl, floating, {
+    middleware: [
+        size({
+            apply({ rects }) {
+                if (floating.value) {
+                    floating.value.style.width = rects.reference.width + 'px';
+                }
+            }
+        })
+    ],
+    whileElementsMounted: autoUpdate,
+});
 </script>
 
 <template>
-    <div>
+    <div v-click-outside="hide">
         <input type="text" class="form-control" ref="inputEl" v-model="value" @click="opened = true;" @keyup="oninput"
             :placeholder="props.placeholder">
         <div ref="floating" class="list-group floating" :style="floatingStyles" v-show="opened">
-            <button v-for="(data, i) in datalist" class="list-group-item" @click="selectIndex(i)">{{ data[props.valueKey]
+            <button v-for="(data, i) in datalist" class="list-group-item" @click="selectIndex(i)">{{ data.value
             }}</button>
         </div>
     </div>

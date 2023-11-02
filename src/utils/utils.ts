@@ -1,5 +1,7 @@
 // import { Pair } from "./api";
 
+import { ObjectDirective } from "vue";
+
 export function formatDate(date: Date){
     const rawtext = date.toLocaleDateString('ru', {weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit'});
     return rawtext.slice(0, 1).toLocaleUpperCase() + rawtext.slice(1, -3);
@@ -34,3 +36,28 @@ export function getNumFromLS<T>(key: string, initValue: T) {
 
     return (value === null) ? initValue : +value;
 }
+
+type mouseEventListener = (event: MouseEvent) => void;
+const listenersMap = new Map<HTMLElement, mouseEventListener>();
+export const vClickOutside: ObjectDirective<HTMLElement, mouseEventListener> = {
+	mounted(el, binding){
+		const listener: mouseEventListener = (event) => {
+			if(!(el === event.target || el.contains(event.target as HTMLElement))){
+				binding.value(event);
+			}
+		};
+
+		listenersMap.set(el, listener);
+
+		document.addEventListener('click', listener);
+	},
+	unmounted(el){
+		const listener = listenersMap.get(el);
+
+		if(!listener){
+			throw new Error('не удалось найти связанный с элементом обработчик событий');
+		}
+
+		document.removeEventListener('click', listener);
+	},
+};
