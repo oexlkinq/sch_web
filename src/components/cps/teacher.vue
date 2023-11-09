@@ -16,7 +16,7 @@ const teacherName = ref<string>();
 defineExpose({
     fetcher(date: string, week: boolean) {
         if (teacherId.value === undefined) {
-            throw new Error('Не выбран преподаватель');
+            throw new Error('Необходимо выбрать один из вариантов в списке');
         }
 
         return api.getPairs({

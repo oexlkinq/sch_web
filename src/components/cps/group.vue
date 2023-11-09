@@ -9,6 +9,7 @@ if (!api) {
     throw new Error('Api is undefined');
 }
 
+// TODO: добавить событие обновления полей ввода, чтобы чистить переменную schedule снаружи
 
 const facultyIndex = ref(getNumFromLS('facultyIndex', undefined));
 const facultyTitle = ref<string>();
@@ -16,13 +17,21 @@ const facultyTitle = ref<string>();
 const groupId = ref(getNumFromLS('groupId', undefined));
 const groupTitle = ref<string>();
 
-watch([groupId], () => {
-    console.log('pre');
-
+watch(groupId, () => {
     if(facultyIndex.value === undefined && groupId.value){
-        console.log('in');
+        const found = datalist.findIndex(v => {
+            console.log(v.groups.some(v => v.id === groupId.value));
+            return v.groups.some(v => v.id === groupId.value);
+        });
+        console.log(found);
         
-        facultyIndex.value = datalist.findIndex(v => v.groups.some(v => v.id === groupId.value));
+        facultyIndex.value = (found === -1) ? undefined : found;
+    }
+});
+
+watch(facultyIndex, (value) => {
+    if(value === undefined){
+        groupId.value = undefined;
     }
 });
 
@@ -40,7 +49,7 @@ const fetcher = (date: string, week: boolean) => {
 };
 
 const titleGenerator = () => {
-    return `${facultyTitle.value}, ${groupTitle.value} группа`;
+    return ((facultyTitle.value) ? `${facultyTitle.value}, ` : '') + `${groupTitle.value} группа`;
 };
 
 const resetInputs = () => {
