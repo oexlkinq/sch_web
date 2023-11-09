@@ -69,7 +69,7 @@ function selectIndex(index: number) {
 
     hide();
 }
-function oninput(event: Event) {
+function oninput() {
     // TODO: перебор вариантов списка стрелочками
 
     // TODO: это действие сбрасывает value, т.к. затрагивает родителя, тот обновляет props.id, что зануляет value
