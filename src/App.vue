@@ -33,10 +33,10 @@ const cps = [
 		title: 'Для преподавателей',
 		component: teacher,
 	},
-	{
-		title: 'Поиск',
-		component: query,
-	},
+	// {
+	// 	title: 'Поиск',
+	// 	component: query,
+	// },
 ];
 
 
@@ -68,6 +68,7 @@ async function updateRes() {
 
 		loading.value = true;
 		error.value = '';
+		schedule.value = undefined;
 
 
 		if (cp.value === undefined) {
@@ -79,7 +80,7 @@ async function updateRes() {
 
 		cp.value.saveState();
 	} catch (e) {
-		console.log(e);
+		console.error(e);
 		error.value = String(e);
 	} finally {
 		loading.value = false;
