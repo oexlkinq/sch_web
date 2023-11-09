@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="id">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useFloating, size, autoUpdate } from '@floating-ui/vue';
 
 import { vClickOutside } from '../utils/utils';
@@ -17,67 +17,63 @@ const props = withDefaults(defineProps<{
 
 const emits = defineEmits<{
     (event: 'update:id', id: id | undefined): void,
-    (event: 'update:value', value: string): void,
+    (event: 'update:value', value: string | undefined): void,
 }>();
 
 
 const inputEl = ref<HTMLInputElement>();
 const floating = ref<HTMLDivElement>();
 
-const value = ref<string>('');
-const bindIdIndex = props.datalist.findIndex((v) => v.id === props.id);
-if(bindIdIndex !== -1){
-    emits('update:value', props.datalist[bindIdIndex].value);
+const definedDatalist = computed(() => props.datalist || []);
 
-    value.value = String(props.datalist[bindIdIndex].value);
+function onpropsidupdate(){
+    console.log('props.id update');
+    
+    const index = definedDatalist.value.findIndex((v) => v.id === props.id);
+
+    if(index !== -1){
+        id.value = definedDatalist.value[index]?.id;
+        value.value = definedDatalist.value[index]?.value;
+    }else{
+        id.value = undefined;
+        value.value = undefined;
+    }
 }
 
+const id = ref<id | undefined>();
+const value = ref<string | undefined>();
+onpropsidupdate();
+
+const props_id = computed(() => props.id);
+watch([props_id], onpropsidupdate);
+
 const datalist = computed(() => {
-    return props.datalist.filter((v) => {
-        // если поле ввода пустое, то в предлагаемом списке должны оказаться все варианты
-        if (!value.value || String(v.value).toLocaleLowerCase().includes(value.value.toLocaleLowerCase())) {
-            return true;
-        }
-    });
+    // если поле ввода пустое, то в предлагаемом списке должны оказаться все варианты
+    return definedDatalist.value.map((v, i) => ({ id: v.id, value: v.value, index: i }))
+        .filter((v) => !value.value || String(v.value).toLocaleLowerCase().includes(value.value.toLocaleLowerCase()));
 });
 
+watch(id, (value) => emits('update:id', value));
+watch(value, (value) => {console.log('emit value');return emits('update:value', value)});
 
 const opened = ref(false);
 
 function hide() {
     opened.value = false;
-    // inputEl.value?.blur();
 }
 function selectIndex(index: number) {
-    emits('update:id', datalist.value[index].id);
-    emits('update:value', datalist.value[index].value);
+    const baseIndex = datalist.value[index].index;
 
-    value.value = String(datalist.value[index].value);
+    id.value = definedDatalist.value[baseIndex]?.id;
+    value.value = definedDatalist.value[baseIndex]?.value;
 
     hide();
 }
-function oninput(event: KeyboardEvent) {
+function oninput(event: Event) {
     // TODO: перебор вариантов списка стрелочками
-    // if (event.key === 'ArrowDown'){
-    //     floating.value?.focus();
 
-    //     return;
-    // }
-
-    if (event.key === 'Enter') {
-        hide();
-
-        return;
-    }
-
-    const index = datalist.value.findIndex((v) => value.value === String(v.value));
-    if (index !== -1) {
-        emits('update:id', datalist.value[index].id);
-        emits('update:value', datalist.value[index].value);
-    } else {
-        emits('update:id', undefined);
-        emits('update:value', value.value);
-    }
+    // TODO: это действие сбрасывает value, т.к. затрагивает родителя, тот обновляет props.id, что зануляет value
+    id.value = undefined;
 }
 
 
@@ -97,7 +93,7 @@ const { floatingStyles } = useFloating(inputEl, floating, {
 
 <template>
     <div v-click-outside="hide">
-        <input type="text" class="form-control" ref="inputEl" v-model="value" @click="opened = true;" @keyup="oninput"
+        <input type="text" class="form-control" ref="inputEl" v-model="value" @click="opened = true;" @input="oninput"
             :placeholder="props.placeholder">
         <div ref="floating" class="list-group floating" :style="floatingStyles" v-show="opened">
             <button v-for="(data, i) in datalist" class="list-group-item" @click="selectIndex(i)">{{ data.value
