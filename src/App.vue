@@ -60,7 +60,6 @@ function onCpResolve() {
 const loading = ref(false);
 const error = ref<string>();
 async function updateRes() {
-	// const cp = ref<InstanceType<typeof group> | InstanceType<typeof teacher> | InstanceType<typeof query>>();
 	try {
 		if (loading.value) {
 			return;
