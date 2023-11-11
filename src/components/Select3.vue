@@ -26,9 +26,13 @@ const floating = ref<HTMLDivElement>();
 
 const definedDatalist = computed(() => props.datalist || []);
 
+const isIdUpdatedByInput = ref<Boolean>(false);
 function onpropsidupdate(){
-    console.log('props.id update');
-    
+    if(isIdUpdatedByInput.value){
+        isIdUpdatedByInput.value = false;
+        return;
+    }
+
     const index = definedDatalist.value.findIndex((v) => v.id === props.id);
 
     if(index !== -1){
@@ -42,6 +46,10 @@ function onpropsidupdate(){
 
 const id = ref<id | undefined>();
 const value = ref<string | undefined>();
+
+watch(id, (value) => emits('update:id', value));
+watch(value, (value) => {console.log('emit value');return emits('update:value', value)});
+
 onpropsidupdate();
 
 const props_id = computed(() => props.id);
@@ -52,9 +60,6 @@ const datalist = computed(() => {
     return definedDatalist.value.map((v, i) => ({ id: v.id, value: v.value, index: i }))
         .filter((v) => !value.value || String(v.value).toLocaleLowerCase().includes(value.value.toLocaleLowerCase()));
 });
-
-watch(id, (value) => emits('update:id', value));
-watch(value, (value) => {console.log('emit value');return emits('update:value', value)});
 
 const opened = ref(false);
 
@@ -69,10 +74,12 @@ function selectIndex(index: number) {
 
     hide();
 }
+
 function oninput() {
     // TODO: перебор вариантов списка стрелочками
 
     // TODO: это действие сбрасывает value, т.к. затрагивает родителя, тот обновляет props.id, что зануляет value
+    isIdUpdatedByInput.value = true;
     id.value = undefined;
 }
 

@@ -76,7 +76,7 @@ const datalist = await api.getGroups();
 const faculties = datalist.map((v, i) => ({ id: i, value: v.faculty }));
 const groups = computed(() => {
     let groups;
-    if (facultyIndex.value && facultyIndex.value >= 0) {
+    if (facultyIndex.value !== undefined) {
         groups = datalist[facultyIndex.value].groups;
     } else {
         groups = datalist.flatMap((fac) => fac.groups);
