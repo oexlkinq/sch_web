@@ -13,7 +13,7 @@ const query = ref<string | undefined>(localStorage.query as string);
 defineExpose({
     fetcher(date: string, week: boolean) {
         if (query.value === undefined) {
-            throw new Error('Не указан поисковый запрос');
+            throw new Error('Необходимо ввести поисковый запрос');
         }
 
         return api.getPairs({

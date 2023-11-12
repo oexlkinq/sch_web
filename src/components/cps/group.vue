@@ -38,7 +38,7 @@ watch(facultyIndex, (value) => {
 
 const fetcher = (date: string, week: boolean) => {
     if (groupId.value === undefined) {
-        throw new Error('Не выбрана группа');
+        throw new Error('Необходимо выбрать одну из групп в списке');
     }
 
     return api.getPairs({
