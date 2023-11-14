@@ -26,7 +26,7 @@ defineExpose({
         });
     },
     titleGenerator() {
-        return `Преподаватель ${teacherName.value}`;
+        return `Преподаватель <a href="${datalist.find(v => v.id === teacherId.value)?.url}" target="_blank" style="font-size: 24px;">${teacherName.value}`;
     },
     resetInputs() {
         teacherId.value = undefined;
