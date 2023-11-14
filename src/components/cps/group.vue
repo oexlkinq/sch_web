@@ -49,7 +49,7 @@ const fetcher = (date: string, week: boolean) => {
 };
 
 const titleGenerator = () => {
-    return ((facultyTitle.value) ? `${facultyTitle.value}, ` : '') + `${groupTitle.value} группа`;
+    return ((facultyTitle.value) ? `${facultyTitle.value}, ` : '') + `${groupTitle.value?.toLocaleUpperCase()} группа`;
 };
 
 const resetInputs = () => {
