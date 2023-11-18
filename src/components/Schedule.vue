@@ -5,13 +5,40 @@ import { formatDate, times } from '../utils/utils';
 
 const props = defineProps<{
     days: Day[],
+    diary: boolean,
 }>();
 
 const fulfilledDays = computed(() => {
     let days = [] as {date: Date, data: string[][]}[];
-    props.days.forEach((day) => {
-        let data = new Array<string[]>(5);
+    let rawDays: Day[];
 
+    const fulfill = props.diary || props.days.length > 1;
+    
+    if(fulfill){
+        rawDays = new Array<Day>(6);
+
+        props.days.forEach(day => rawDays[day.date.getDay() - 1] = day);
+        
+        let startDate = new Date(props.days[0].date);
+        startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
+        for(let i = 0; i < rawDays.length; i++){
+            if(!rawDays[i]){
+                let date = new Date(startDate);
+                date.setDate(date.getDate() + i);
+    
+                rawDays[i] = {date, pairs: []};
+            }
+        }
+    }else{
+        rawDays = props.days.slice();
+    }
+
+
+    for(let i = 0; i < rawDays.length; i++){
+        const day = rawDays[i];
+        
+        let data = new Array<string[]>(5);
+    
         day.pairs.forEach(pair => {
             // let addit = '';
             // if(pair.groups){
@@ -20,16 +47,16 @@ const fulfilledDays = computed(() => {
             //     addit = pair.teachers.map(v => {
             //         const [st, nd, rd] = v.name.replace(/ *\(.*?\) */g, ' ').split(' ');
             //         const name = `${st} ${nd[0]}.${rd[0]}.`;
-
+    
             //         let code = name;
             //         if(v.url){
             //             code = `<a href="${v.url}" target="_blank">${code}</a>`;
             //         }
-
+    
             //         return code;
             //     }).join(', ');
             // }
-
+    
             if(data[pair.num - 1]){
                 data[pair.num - 1] = [
                     data[pair.num - 1][0] + '<br>' + pair.text,
@@ -40,17 +67,21 @@ const fulfilledDays = computed(() => {
                 ];
             }
         });
-
+    
         for (let i = 0; i < 5; i++) {
             if (data[i]) {
                 continue;
             }
-
+    
             data[i] = ['-'];
         }
-
-        days.push({date: day.date, data});
-    });
+    
+        let place = i;
+        if(props.diary && rawDays.length === 6){
+            place = [0, 2, 4, 1, 3, 5][i];
+        }
+        days[place] = {date: day.date, data};
+    }
 
     return days;
 });

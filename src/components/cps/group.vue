@@ -53,9 +53,9 @@ const titleGenerator = () => {
 };
 
 const resetInputs = () => {
-    facultyIndex.value = undefined;
-    facultyTitle.value = undefined;
     groupId.value = undefined;
+    facultyIndex.value = undefined;
+    // facultyTitle.value = undefined;
 };
 
 const saveState = () => {

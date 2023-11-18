@@ -15,9 +15,10 @@ provide('api', api);
 
 
 const date = ref((new Date()).toLocaleDateString('en-ca'));
+const week = ref(true);
 const schedule = ref<Day[]>();
 const scheduleTitle = ref<string>();
-const week = ref(true);
+const diary = ref(localStorage.diary === "true");
 
 
 import group from './components/cps/group.vue';
@@ -44,17 +45,17 @@ const cp = ref<InstanceType<typeof group> | InstanceType<typeof teacher> | Insta
 const currentCpIndex = ref<number>(getNumFromLS('currentCpIndex', 0));
 
 
-let firstCpResolve = true;
-function onCpResolve() {
-	if (firstCpResolve) {
-		firstCpResolve = false;
+// let firstCpResolve = true;
+// function onCpResolve() {
+// 	// debugger;
+// 	// if (firstCpResolve) {
+// 	// 	firstCpResolve = false;
 
-		return;
-	}
+// 	// 	return;
+// 	// }
 
-	cp.value?.resetInputs();
-	localStorage.currentCpIndex = currentCpIndex.value;
-}
+// 	cp.value?.resetInputs();
+// }
 
 
 const loading = ref(false);
@@ -78,6 +79,8 @@ async function updateRes() {
 		scheduleTitle.value = cp.value.titleGenerator();
 
 		cp.value.saveState();
+		localStorage.diary = diary.value;
+		localStorage.currentCpIndex = currentCpIndex.value;
 	} catch (e) {
 		console.error(e);
 		error.value = String(e);
@@ -135,7 +138,7 @@ async function makePdf() {
 			<div class="col-xs-12 col-lg-7 mid-col">
 				<div class="row">
 					<KeepAlive>
-						<Suspense @resolve="onCpResolve">
+						<Suspense>
 							<component :is="cps[currentCpIndex].component" ref="cp" />
 
 							<template #fallback>
@@ -165,8 +168,8 @@ async function makePdf() {
 				</div>
 				<div class="row">
 					<div class="col-xs-12 col-md-6 col-lg-12">
-						<label style="height: 34px;"><input type="checkbox" v-model="week" style="margin: 10px 6px 0 0;">На
-							всю неделю</label>
+						<label class="checkbox-label"><input type="checkbox" v-model="week" class="checkbox">На всю неделю</label>
+						<!-- <label class="checkbox-label"><input type="checkbox" v-model="diary" class="checkbox">Дневник</label> -->
 					</div>
 				</div>
 			</div>
@@ -174,9 +177,9 @@ async function makePdf() {
 
 		<template v-if="schedule && schedule.length > 0">
 			<div id="scheduleBody">
-				<h3 style="text-align: center;" v-html="scheduleTitle"></h3>
+				<h3 v-html="scheduleTitle"></h3>
 
-				<Schedule :days="schedule" />
+				<Schedule :days="schedule" :diary="diary"/>
 			</div>
 
 			<button class="btn btn-primary w-100" @click="makePdf">
@@ -200,8 +203,20 @@ async function makePdf() {
 </template>
 
 <style scoped>
+.checkbox-label {
+	display: flex;
+	margin: 0;
+	line-height: 40px;
+}
+.checkbox {
+	margin: 0 6px 0 0;
+}
+
 #scheduleBody {
 	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+#scheduleBody > h3 {
+	text-align: center;
 }
 
 .row {
