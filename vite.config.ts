@@ -4,5 +4,5 @@ import vue from '@vitejs/plugin-vue'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
-  base: 'http://files.shgpi.edu.ru/files/vcenter/shebot/',
+  base: '/files/vcenter/shebot/',
 })
