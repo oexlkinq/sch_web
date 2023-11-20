@@ -20,10 +20,8 @@ const groupTitle = ref<string>();
 watch(groupId, () => {
     if(facultyIndex.value === undefined && groupId.value){
         const found = datalist.findIndex(v => {
-            console.log(v.groups.some(v => v.id === groupId.value));
             return v.groups.some(v => v.id === groupId.value);
         });
-        console.log(found);
         
         facultyIndex.value = (found === -1) ? undefined : found;
     }
@@ -76,7 +74,7 @@ const datalist = await api.getGroups();
 const faculties = datalist.map((v, i) => ({ id: i, value: v.faculty }));
 const groups = computed(() => {
     let groups;
-    if (facultyIndex.value !== undefined) {
+    if (facultyIndex.value !== undefined && datalist[facultyIndex.value] !== undefined) {
         groups = datalist[facultyIndex.value].groups;
     } else {
         groups = datalist.flatMap((fac) => fac.groups);

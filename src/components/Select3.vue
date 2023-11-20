@@ -48,7 +48,7 @@ const id = ref<id | undefined>();
 const value = ref<string | undefined>();
 
 watch(id, (value) => emits('update:id', value));
-watch(value, (value) => {console.log('emit value');return emits('update:value', value)});
+watch(value, (value) => {return emits('update:value', value)});
 
 onpropsidupdate();
 
