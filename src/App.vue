@@ -10,7 +10,8 @@ import { getNumFromLS } from './utils/utils';
 
 
 // TODO: приложить сюда мозг. мб есть более хороший способ организовать это
-const api = new Api((import.meta.env.PROD) ? window.location.protocol + '//shgpi.edu.ru/sch_api/index.php' : 'http://localhost/sch_api/index.php');
+const useLocalApi = false;
+const api = new Api((import.meta.env.PROD || !useLocalApi) ? window.location.protocol + '//shgpi.edu.ru/sch_api/index.php': 'http://localhost/sch_api/index.php');
 provide('api', api);
 
 
