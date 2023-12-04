@@ -56,9 +56,18 @@ const props_id = computed(() => props.id);
 watch([props_id], onpropsidupdate);
 
 const datalist = computed(() => {
-    // если поле ввода пустое, то в предлагаемом списке должны оказаться все варианты
-    return definedDatalist.value.map((v, i) => ({ id: v.id, value: v.value, index: i }))
-        .filter((v) => !value.value || String(v.value).toLocaleLowerCase().includes(value.value.toLocaleLowerCase()));
+    const lowerCaseQuery = value.value?.toLocaleLowerCase('ru');
+
+    let tempDatalist = definedDatalist.value
+        .map((v, i) => ({ id: v.id, value: v.value, index: i }))
+        .filter((v) => !lowerCaseQuery || String(v.value).toLocaleLowerCase('ru').includes(lowerCaseQuery));
+    //                  ^если поле ввода пустое, то для всех будет true и все варианты останутся в списке
+
+    if(lowerCaseQuery){
+        tempDatalist.sort((a, b) => Number(b.value.toLocaleLowerCase('ru').startsWith(lowerCaseQuery)) - Number(a.value.toLocaleLowerCase('ru').startsWith(lowerCaseQuery)));
+    }
+
+    return tempDatalist;
 });
 
 const opened = ref(false);
