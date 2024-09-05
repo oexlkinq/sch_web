@@ -2,12 +2,12 @@
 
 import { ObjectDirective } from "vue";
 
-export function formatDate(date: Date){
-    const rawtext = date.toLocaleDateString('ru', {weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit'});
+export function formatDate(date: Date) {
+	const rawtext = date.toLocaleDateString('ru', { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' });
     return rawtext.slice(0, 1).toLocaleUpperCase() + rawtext.slice(1, -3);
 }
 
-export function makeItMonday(date: string){
+export function makeItMonday(date: string) {
     let monDate = new Date(date);
     monDate.setDate(monDate.getDate() - monDate.getDay() + 1);
     return monDate.toLocaleDateString('en-ca');
@@ -23,7 +23,7 @@ export const times = [
 	['18:20', '19:50'],
 ].map((v) => {
 	return v.reduce((p, c, i) => {
-		if(i){
+		if (i) {
 			p += ' - ';
 		}
 		let parts = c.split(':');
@@ -40,9 +40,9 @@ export function getNumFromLS<T>(key: string, initValue: T) {
 type mouseEventListener = (event: MouseEvent) => void;
 const listenersMap = new Map<HTMLElement, mouseEventListener>();
 export const vClickOutside: ObjectDirective<HTMLElement, mouseEventListener> = {
-	mounted(el, binding){
+	mounted(el, binding) {
 		const listener: mouseEventListener = (event) => {
-			if(!(el === event.target || el.contains(event.target as HTMLElement))){
+			if (!(el === event.target || el.contains(event.target as HTMLElement))) {
 				binding.value(event);
 			}
 		};
@@ -51,10 +51,10 @@ export const vClickOutside: ObjectDirective<HTMLElement, mouseEventListener> = {
 
 		document.addEventListener('click', listener);
 	},
-	unmounted(el){
+	unmounted(el) {
 		const listener = listenersMap.get(el);
 
-		if(!listener){
+		if (!listener) {
 			throw new Error('не удалось найти связанный с элементом обработчик событий');
 		}
 
