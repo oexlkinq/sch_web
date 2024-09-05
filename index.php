@@ -15,6 +15,9 @@ const methodsValidation = [
     'getTeachers' => [],
 
     'groups.get' => [],
+    'groups.test' => [
+        'groupName' => 'evalString',
+    ],
     'teachers.get' => [],
 
     'pairs.get' => [
@@ -28,32 +31,84 @@ const methodsValidation = [
             'query' => 'evalQuery',
         ],
     ],
+    'pairs.bulkGet' => [
+        'date' => 'evalStringDate',
+        '@target[]' => [
+            'groupName' => 'evalString',
+            'query' => 'evalQuery',
+        ]
+    ],
+
+    'updates.get' => [
+        'date' => 'evalStringDate',
+    ],
+    // запросы с этим методом перенаправляются через nginx на локальный сервер парсера
+    // 'updates.watch' => [
+    //     'timeout' => 'evalNumber',
+    // ],
 ];
 
-if(!array_key_exists('method', $_REQUEST) || !array_key_exists($_REQUEST['method'], methodsValidation)){
-    sendResult("неизвестное значение параметра \"method\"", false, 400);
+if(!array_key_exists('method', $_REQUEST)){
+    sendResult("отсутствует обязательный параметр method", false, 400);
 }
 
+if(!array_key_exists($_REQUEST['method'], methodsValidation)){
+    $method = $_REQUEST['method'];
+    sendResult("запрошенный метод неизвестен (\"$method\")", false, 400);
+}
+
+if (! function_exists('str_ends_with')) {
+    function str_ends_with(string $haystack, string $needle): bool
+    {
+        $needle_len = strlen($needle);
+        return ($needle_len === 0 || 0 === substr_compare($haystack, $needle, - $needle_len));
+    }
+}
+
+// проверить и собрать требуемые для запрошенного метода параметры из $_REQUEST в $evaled
 $errors = [];
 $evaled = ['method' => $_REQUEST['method']];
 foreach(methodsValidation[$_REQUEST['method']] as $argName => $valFunc){
     try{
         if($argName[0] === '@'){
             $argsGroupName = $argName;
+            // если параметр - @группа, то вместо функции-валидатора хранится список возможных параметров
             $argsGroup = $valFunc;
             $argsProcessed = 0;
+            $evaled[$argsGroupName] = [];
+
             foreach($argsGroup as $argName => $valFunc){
-                if(array_key_exists($argName, $_REQUEST)){
+                if(str_ends_with($argsGroupName, '[]')){
+                    if(array_key_exists($argName, $_REQUEST)){
+                        if(!is_array($_REQUEST[$argName])){
+                            throw new Exception("параметр \"$argName\" должен быть массивом");
+                        }
+
+                        $evaled[$argsGroupName][$argName] = [];
+                        foreach (array_unique($_REQUEST[$argName]) as $value) {
+                            if($argsProcessed > 100){
+                                throw new Exception('слишком много целей');
+                            }
+
+                            try{
+                                $evaled[$argsGroupName][$argName][] = $valFunc($value);
+                                $argsProcessed++;
+                            }catch(Exception $e){
+                                throw new Exception($e->getMessage() . " (параметр \"$argName\")", 0, $e);
+                            }
+                        }
+                    }
+                }else if(array_key_exists($argName, $_REQUEST)){
                     try{
                         $valRes = $valFunc($_REQUEST[$argName]);
+
+                        $evaled[$argsGroupName] = [$argName => $valRes];
+                        $argsProcessed = 1;
+
+                        break;
                     }catch(Exception $e){
                         throw new Exception($e->getMessage() . " (параметр \"$argName\")", 0, $e);
                     }
-
-                    $evaled[$argsGroupName] = [$argName => $valRes];
-                    $argsProcessed++;
-
-                    break;
                 }
             }
 
@@ -83,6 +138,14 @@ $res = [];
 $funcName = str_replace('.', '_', $evaled['method']);
 call_user_func($funcName, $evaled);
 
+
+function updates_get(array $evaled){
+    $res = mustQuery("select f.name, f.display_name, f.short_display_name from insertions i inner join faculties f on f.id = i.faculty_id where i.date = $1", [
+        $evaled['date'],
+    ]);
+
+    sendResult($res);
+}
 
 function pairs_get(array $evaled){
     $week = $evaled['week'];
@@ -134,6 +197,39 @@ function pairs_get(array $evaled){
     sendResult($res);
 }
 
+function pairs_bulkGet(array $evaled){
+    $res = [];
+    
+    foreach($evaled['@target[]'] as $targetType => $targets){
+        $res[$targetType] = [];
+
+        // TODO: здесь можно получить расписание сразу для всех целей одного типа
+        foreach($targets as $target){
+            $qres = [];
+
+            if($targetType === 'groupName') {
+                $qres = mustQuery("select p.text, p.num from pairs p inner join groupsofpairs gop on p.id = gop.pair_id inner join groups g on g.id = gop.group_id where p.date = $2 and g.name = $1 order by p.date asc, p.num asc", [
+                    $target,
+                    $evaled['date'],
+                ]);
+            }else if($targetType === 'query') {
+                $qres = mustQuery("select p.num, p.text || ( select ' (' || string_agg(groups.name, ', ') || ')' from groupsOfPairs gop inner join groups on groups.id = gop.group_id where pair_id = p.id group by pair_id ) as text from pairs p where lower(text) like lower($1) and p.date = $2 order by p.date asc, num asc limit 100", [
+                    "%$target%",
+                    $evaled['date'],
+                ]);
+            }
+
+            foreach($qres as $rowkey => $row){
+                $qres[$rowkey]['num'] = intval($row['num']);
+            }
+
+            $res[$targetType][$target] = $qres;
+        }
+    }
+
+    sendResult($res);
+}
+
 
 function groups_get(array $evaled){
     $res = mustQuery("select g.id, g.name, f.display_name as faculty from groups g inner join faculties f on g.faculty_id = f.id order by f.display_name asc, g.name asc");
@@ -145,6 +241,14 @@ function groups_get(array $evaled){
     $res = array_groupBy($res, 'faculty', 'groups');
 
     sendResult($res);
+}
+
+function groups_test(array $evaled){
+    $res = mustQuery("select true from groups where name = $1", [$evaled['groupName']]);
+
+    sendResult([
+        'available' => count($res) > 0,
+    ]);
 }
 
 function teachers_get(array $evaled){
@@ -221,6 +325,12 @@ function mustQuery(string $query, $params = []){
     return $fres;
 }
 
+/**
+ * группирует строки из $arr.
+ * создаёт массив, состоящий из ассоциативных массивов с двумя ключами:
+ *  $keyOfKey - содержит значение столбца, по которому строки были сгруппированы
+ *  $keyOfRest - содержит массив, содержащий сгруппированные строки, в которых удалён столбец группировки
+*/
 function array_groupBy($arr, $keyOfKey, $keyOfRest){
     $res = [];
     $groups = [];
