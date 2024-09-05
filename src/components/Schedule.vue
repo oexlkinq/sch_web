@@ -37,7 +37,8 @@ const fulfilledDays = computed(() => {
     for(let i = 0; i < rawDays.length; i++){
         const day = rawDays[i];
         
-        let data = new Array<string[]>(5);
+        let maxPairIndex = 4;
+        let data = new Array<string[]>(maxPairIndex + 1);
     
         day.pairs.forEach(pair => {
             // let addit = '';
@@ -57,18 +58,24 @@ const fulfilledDays = computed(() => {
             //     }).join(', ');
             // }
     
-            if(data[pair.num - 1]){
-                data[pair.num - 1] = [
-                    data[pair.num - 1][0] + '<br>' + pair.text,
+            const pairIndex = pair.num - 1;
+
+            if(data[pairIndex]){
+                data[pairIndex] = [
+                    data[pairIndex][0] + '<br>' + pair.text,
                 ];
             }else{
-                data[pair.num - 1] = [
+                data[pairIndex] = [
                     pair.text,
                 ];
             }
+
+            if(maxPairIndex < pairIndex){
+                maxPairIndex = pairIndex;
+            }
         });
     
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < maxPairIndex + 1; i++) {
             if (data[i]) {
                 continue;
             }
