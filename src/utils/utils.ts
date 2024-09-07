@@ -4,13 +4,13 @@ import { ObjectDirective } from "vue";
 
 export function formatDate(date: Date) {
 	const rawtext = date.toLocaleDateString('ru', { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' });
-    return rawtext.slice(0, 1).toLocaleUpperCase() + rawtext.slice(1, -3);
+	return rawtext.slice(0, 1).toLocaleUpperCase() + rawtext.slice(1, -3);
 }
 
 export function makeItMonday(date: string) {
-    let monDate = new Date(date);
-    monDate.setDate(monDate.getDate() - monDate.getDay() + 1);
-    return monDate.toLocaleDateString('en-ca');
+	let monDate = new Date(date);
+	monDate.setDate(monDate.getDate() - monDate.getDay() + 1);
+	return monDate.toLocaleDateString('en-ca');
 }
 
 export const times = [
@@ -30,12 +30,6 @@ export const times = [
 		return p + `${parts[0]}<sup>${parts[1]}</sup>`;
 	}, '');
 });
-
-export function getNumFromLS<T>(key: string, initValue: T) {
-    const value = localStorage.getItem(key);
-
-    return (value === null) ? initValue : +value;
-}
 
 type mouseEventListener = (event: MouseEvent) => void;
 const listenersMap = new Map<HTMLElement, mouseEventListener>();
@@ -61,3 +55,11 @@ export const vClickOutside: ObjectDirective<HTMLElement, mouseEventListener> = {
 		document.removeEventListener('click', listener);
 	},
 };
+
+/**
+ * экранирует специальные символы регулярных выражений в строке
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#escaping
+ * */
+export function escapeRegExp(string: string) {
+	return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+}

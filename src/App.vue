@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { provide, ref } from 'vue';
-import { Api, Day } from './utils/api.ts';
+import { Api, Day } from './utils/api';
 import Schedule from './components/Schedule.vue';
 
 import { jsPDF } from 'jspdf';
 import { loadFontAsBase64, fonts } from './utils/fonts';
-
-import { getNumFromLS } from './utils/utils';
+import { State } from './utils/state';
 
 
 // TODO: приложить сюда мозг. мб есть более хороший способ организовать это
@@ -14,12 +13,32 @@ const useLocalApi = false;
 const api = new Api((import.meta.env.PROD || !useLocalApi) ? window.location.protocol + '//shgpi.edu.ru/sch_api/index.php': 'http://localhost/sch_api/index.php');
 provide('api', api);
 
+const state = new State<{
+	cpIndex: number,
+	diary: boolean,
+	week: boolean,
+
+	teacherIndex: number | undefined,
+	facultyIndex: number | undefined,
+	groupIndex: number | undefined,
+}>('state', {
+	cpIndex: 0,
+	diary: false,
+	week: true,
+
+	teacherIndex: undefined,
+	facultyIndex: undefined,
+	groupIndex: undefined,
+})
+provide('state', state)
+export type stateType = typeof state
+
 
 const date = ref((new Date()).toLocaleDateString('en-ca'));
-const week = ref(true);
+const week = ref(state.data.week);
 const schedule = ref<Day[]>();
 const scheduleTitle = ref<string>();
-const diary = ref(localStorage.diary === "true");
+const diary = ref(state.data.diary);
 
 
 import group from './components/cps/group.vue';
@@ -43,20 +62,7 @@ const cps = [
 
 
 const cp = ref<InstanceType<typeof group> | InstanceType<typeof teacher> | InstanceType<typeof query>>();
-const currentCpIndex = ref<number>(getNumFromLS('currentCpIndex', 0));
-
-
-// let firstCpResolve = true;
-// function onCpResolve() {
-// 	// debugger;
-// 	// if (firstCpResolve) {
-// 	// 	firstCpResolve = false;
-
-// 	// 	return;
-// 	// }
-
-// 	cp.value?.resetInputs();
-// }
+const currentCpIndex = ref(state.data.cpIndex);
 
 
 const loading = ref(false);
@@ -72,7 +78,7 @@ async function updateRes() {
 		schedule.value = undefined;
 
 
-		if (cp.value === undefined) {
+		if (!cp.value) {
 			return alert('не удалось загрузить панель параметров запроса');
 		}
 
@@ -80,8 +86,9 @@ async function updateRes() {
 		scheduleTitle.value = cp.value.titleGenerator();
 
 		cp.value.saveState();
-		localStorage.diary = diary.value;
-		localStorage.currentCpIndex = currentCpIndex.value;
+		state.data.diary = diary.value;
+		state.data.cpIndex = currentCpIndex.value;
+		state.data.week = week.value
 	} catch (e) {
 		console.error(e);
 		error.value = String(e);

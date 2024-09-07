@@ -1,98 +1,129 @@
-<script setup lang="ts" generic="id">
-import { computed, ref, watch } from 'vue';
+<script setup lang="ts">
+import { computed, ref } from 'vue';
 import { useFloating, size, autoUpdate } from '@floating-ui/vue';
 
-import { vClickOutside } from '../utils/utils';
+import { escapeRegExp, vClickOutside } from '../utils/utils';
 
-type datalist = { id: id, value: string }[];
+type valueType = string
+type datalist = valueType[];
+export type selection = {
+    originalIndex: number,
+    value: valueType,
+}
 
 const props = withDefaults(defineProps<{
     datalist?: datalist,
-    id?: id,
     placeholder?: string,
 }>(), {
     datalist: () => [] as datalist,
     placeholder: '',
 });
 
-const emits = defineEmits<{
-    (event: 'update:id', id: id | undefined): void,
-    (event: 'update:value', value: string | undefined): void,
+const emit = defineEmits<{
+    'update:selection': [selection: selection | undefined],
+    'user-input': [],
 }>();
 
+const query = ref('')
 
-const inputEl = ref<HTMLInputElement>();
-const floating = ref<HTMLDivElement>();
+/** список значений, в которых найден запрос от пользователя. зависит от query и props.datalist */
+const filtered = computed(() => {
+    let tempDatalist = props.datalist.map((value, index) => ({
+        index,
+        value,
+    }))
 
-const definedDatalist = computed(() => props.datalist || []);
-
-const isIdUpdatedByInput = ref<Boolean>(false);
-function onpropsidupdate(){
-    if(isIdUpdatedByInput.value){
-        isIdUpdatedByInput.value = false;
-        return;
+    if (!query.value) {
+        return tempDatalist
     }
 
-    const index = definedDatalist.value.findIndex((v) => v.id === props.id);
+    const lowerCaseQuery = query.value.toLocaleLowerCase('ru');
 
-    if(index !== -1){
-        id.value = definedDatalist.value[index]?.id;
-        value.value = definedDatalist.value[index]?.value;
-    }else{
-        id.value = undefined;
-        value.value = undefined;
-    }
-}
+    // фильтр по запросу от пользователя
+    tempDatalist = tempDatalist.filter(item => item.value.toLocaleLowerCase('ru').includes(lowerCaseQuery));
 
-const id = ref<id | undefined>();
-const value = ref<string | undefined>();
+    // сортировка по месту вхождения подстроки, чтобы первыми оказались строки, в которых слова начинаются с запроса от пользователя
+    const re = new RegExp(`(\\b)${escapeRegExp(query.value)}`, 'i')
+    tempDatalist.sort((a, b) => {
+        const searchA = a.value.search(re)
+        const searchB = b.value.search(re)
 
-watch(id, (value) => emits('update:id', value));
-watch(value, (value) => {return emits('update:value', value)});
+        if (searchA >= 0 && searchB >= 0) {
+            return searchA - searchB
+        }
 
-onpropsidupdate();
+        if (searchA === -1) {
+            return 1
+        }
 
-const props_id = computed(() => props.id);
-watch([props_id], onpropsidupdate);
+        if (searchB === -1) {
+            return -1
+        }
 
-const datalist = computed(() => {
-    const lowerCaseQuery = value.value?.toLocaleLowerCase('ru');
-
-    let tempDatalist = definedDatalist.value
-        .map((v, i) => ({ id: v.id, value: v.value, index: i }))
-        .filter((v) => !lowerCaseQuery || String(v.value).toLocaleLowerCase('ru').includes(lowerCaseQuery));
-    //                  ^если поле ввода пустое, то для всех будет true и все варианты останутся в списке
-
-    if(lowerCaseQuery){
-        tempDatalist.sort((a, b) => Number(b.value.toLocaleLowerCase('ru').startsWith(lowerCaseQuery)) - Number(a.value.toLocaleLowerCase('ru').startsWith(lowerCaseQuery)));
-    }
+        return a.value.localeCompare(b.value, 'ru')
+    });
 
     return tempDatalist;
 });
 
-const opened = ref(false);
 
-function hide() {
-    opened.value = false;
+const selection = ref<selection | undefined>()
+
+// функция для смены выделения
+function selectIndex(index: number, isTrusted: boolean) {
+    const item = filtered.value[index]
+
+    query.value = item.value
+
+    selection.value = {
+        originalIndex: item.index,
+        // TODO:
+        // filteredIndex: index,
+        value: item.value
+    }
+    emit('update:selection', selection.value)
+
+    open.value = false
+
+    // смысл isTrusted аналогичен isTrusted из Event
+    if (isTrusted) {
+        emit('user-input')
+    }
 }
-function selectIndex(index: number) {
-    const baseIndex = datalist.value[index].index;
 
-    id.value = definedDatalist.value[baseIndex]?.id;
-    value.value = definedDatalist.value[baseIndex]?.value;
+// функция для сброса выделения
+function reset() {
+    query.value = ''
 
-    hide();
+    // сбросить текущее выделение
+    selection.value = undefined
+    emit('update:selection', undefined)
 }
 
-function oninput() {
-    // TODO: перебор вариантов списка стрелочками
+// вызывается при изменении запроса в поле ввода
+function oninput(event: Event) {
+    if (!event.isTrusted) {
+        return
+    }
 
-    // TODO: это действие сбрасывает value, т.к. затрагивает родителя, тот обновляет props.id, что зануляет value
-    isIdUpdatedByInput.value = true;
-    id.value = undefined;
+    // сбросить текущее выделение
+    selection.value = undefined
+    emit('update:selection', undefined)
+
+    // обновить запрос (вызовет обновление фильтрованного списка)
+    query.value = (event.target as HTMLInputElement).value
+
+    if (event.isTrusted) {
+        emit('user-input')
+    }
 }
 
 
+const open = ref(false)
+
+const floating = ref<HTMLDivElement>();
+const inputEl = ref<HTMLInputElement>();
+// создание стиля для блока списка результатов поиска
 const { floatingStyles } = useFloating(inputEl, floating, {
     middleware: [
         size({
@@ -105,15 +136,21 @@ const { floatingStyles } = useFloating(inputEl, floating, {
     ],
     whileElementsMounted: autoUpdate,
 });
+
+defineExpose({
+    selectIndex,
+    reset,
+})
 </script>
 
 <template>
-    <div v-click-outside="hide">
-        <input type="text" class="form-control" ref="inputEl" v-model="value" @click="opened = true;" @input="oninput"
+    <div v-click-outside="() => open = false">
+        <input type="text" class="form-control" ref="inputEl" @click="open = true" @input="oninput" :value="query"
             :placeholder="props.placeholder">
-        <div ref="floating" class="list-group floating" :style="floatingStyles" v-show="opened">
-            <button v-for="(data, i) in datalist" class="list-group-item" @click="selectIndex(i)">{{ data.value
-            }}</button>
+        <div ref="floating" class="list-group floating" :style="floatingStyles" v-show="open">
+            <button v-for="(item, index) in filtered" class="list-group-item" @click="selectIndex(index, true)">
+                {{ item.value }}
+            </button>
         </div>
     </div>
 </template>

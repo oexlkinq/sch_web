@@ -1,48 +1,71 @@
 <script setup lang="ts">
-import { inject, ref } from 'vue';
-import Select3 from '../Select3.vue';
+import { inject, onMounted, ref } from 'vue';
+import Select3, { selection } from '../Select3.vue';
 import { Api } from '../../utils/api';
-import { getNumFromLS } from '../../utils/utils';
+import { stateType } from '../../App.vue';
 
 const api = inject<Api>('api');
 if (!api) {
     throw new Error('Api is undefined');
 }
+const state = inject<stateType>('state')
+if (!state) {
+    throw new Error('State is undefined')
+}
 
-
-const teacherId = ref(getNumFromLS('teacherId', undefined));
-const teacherName = ref<string>();
+const teacherSelect = ref<InstanceType<typeof Select3>>()
+const selectedTeacher = ref<selection>();
+onMounted(() => {
+    if(teacherSelect.value && state.data.teacherIndex){
+        teacherSelect.value.selectIndex(state.data.teacherIndex, false)
+    }
+})
 
 defineExpose({
     fetcher(date: string, week: boolean) {
-        if (teacherId.value === undefined) {
+        if (!selectedTeacher.value) {
             throw new Error('Необходимо выбрать одного из преподавателей в списке');
         }
+
+        const teacher = teachers[selectedTeacher.value.originalIndex]
 
         return api.getPairs({
             date,
             week,
-            teacherId: teacherId.value,
+            teacherId: teacher.id,
         });
     },
     titleGenerator() {
-        return `Преподаватель <a href="${datalist.find(v => v.id === teacherId.value)?.url}" target="_blank" style="font-size: 24px;">${teacherName.value}`;
+        if(!selectedTeacher.value){
+            console.warn('вызвана генерация заголовка расписания при отсутствии выбранного преподавателя')
+
+            return 'Расписание'
+        }
+
+        const teacher = teachers[selectedTeacher.value.originalIndex]
+
+        return `Преподаватель <a href="${datalist.find(v => v.id === teacher.id)?.url}" target="_blank" style="font-size: 24px;">${teacher.name}`;
     },
     resetInputs() {
-        teacherId.value = undefined;
+        teacherSelect.value?.reset()
     },
     saveState() {
-        localStorage.teacherId = teacherId.value;
+        state.data.teacherIndex = selectedTeacher.value?.originalIndex;
     },
 });
 
 
 const datalist = await api.getTeachers();
-const teachers = datalist.map(teacher => ({ id: teacher.id, value: teacher.name }));
+const teachers = datalist.map((teacher, originalIndex) => ({
+    id: teacher.id,
+    name: teacher.name,
+    originalIndex,
+}));
+const teacherNames = teachers.map(teacher => teacher.name)
 </script>
 
 <template >
     <div class="col-xs-12 col-md-6 col-lg-12">
-        <Select3 :datalist="teachers" v-model:id="teacherId" v-model:value="teacherName" placeholder="ФИО преподавателя" />
+        <Select3 :datalist="teacherNames" v-model:selection="selectedTeacher" placeholder="ФИО преподавателя" ref="teacherSelect"/>
     </div>
 </template>
