@@ -160,7 +160,7 @@ async function makePdf() {
 
 				<div class="row">
 					<div class="col-xs-12">
-						<button @click="updateRes" class="btn btn-primary w-100">
+						<button @click="updateRes" class="btn btn-primary w-100" :disabled="loading">
 							<div class="spinner-border spinner-border-sm" v-if="loading"></div>
 							Показать
 						</button>
