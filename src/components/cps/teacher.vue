@@ -27,7 +27,7 @@ defineExpose({
             throw new Error('Необходимо выбрать одного из преподавателей в списке');
         }
 
-        const teacher = teachers[selectedTeacher.value.originalIndex]
+        const teacher = teachers[selectedTeacher.value.index]
 
         return api.getPairs({
             date,
@@ -42,7 +42,7 @@ defineExpose({
             return 'Расписание'
         }
 
-        const teacher = teachers[selectedTeacher.value.originalIndex]
+        const teacher = teachers[selectedTeacher.value.index]
 
         return `Преподаватель <a href="${datalist.find(v => v.id === teacher.id)?.url}" target="_blank" style="font-size: 24px;">${teacher.name}`;
     },
@@ -50,7 +50,7 @@ defineExpose({
         teacherSelect.value?.reset()
     },
     saveState() {
-        state.data.teacherIndex = selectedTeacher.value?.originalIndex;
+        state.data.teacherIndex = selectedTeacher.value?.index;
     },
 });
 

@@ -7,7 +7,7 @@ import { escapeRegExp, vClickOutside } from '../utils/utils';
 type valueType = string
 type datalist = valueType[];
 export type selection = {
-    originalIndex: number,
+    index: number,
     value: valueType,
 }
 
@@ -71,15 +71,13 @@ const selection = ref<selection | undefined>()
 
 // функция для смены выделения
 function selectIndex(index: number, isTrusted: boolean) {
-    const item = filtered.value[index]
+    const item = props.datalist[index]
 
-    query.value = item.value
+    query.value = item
 
     selection.value = {
-        originalIndex: item.index,
-        // TODO:
-        // filteredIndex: index,
-        value: item.value
+        index: index,
+        value: item,
     }
     emit('update:selection', selection.value)
 
@@ -148,7 +146,7 @@ defineExpose({
         <input type="text" class="form-control" ref="inputEl" @click="open = true" @input="oninput" :value="query"
             :placeholder="props.placeholder">
         <div ref="floating" class="list-group floating" :style="floatingStyles" v-show="open">
-            <button v-for="(item, index) in filtered" class="list-group-item" @click="selectIndex(index, true)">
+            <button v-for="item in filtered" class="list-group-item" @click="selectIndex(item.index, true)">
                 {{ item.value }}
             </button>
         </div>
