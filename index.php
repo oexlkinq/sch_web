@@ -1,5 +1,13 @@
 <?php
 
+$etag = makeETag();
+if (array_key_exists('HTTP_IF_NONE_MATCH', $_SERVER) && trim($_SERVER['HTTP_IF_NONE_MATCH']) === "\"$etag\"") {
+    header('Access-Control-Allow-Origin: *');
+    header("HTTP/1.1 304 Not Modified");
+    exit(0);
+}
+
+
 const methodsValidation = [
     'getPairs.group' => [
         'date' => 'evalStringDate',
@@ -304,6 +312,11 @@ function getPairs_query(array $evaled){
 }
 
 
+/**
+ * выполняет указанный sql запрос $query с параметрами $params
+ * при ошибке отправляет ответ с ошибкой клиенту
+ * возвращает все строки результата запроса
+ * */
 function mustQuery(string $query, $params = []){
     $db = pg_connect("host=localhost dbname=sch user=obs");
     if(!$db){
@@ -356,8 +369,11 @@ function array_groupBy($arr, $keyOfKey, $keyOfRest){
 
 
 function sendResult($data, $ok = true, $code = 200, $exitCode = 0){
+    global $etag;
     header('Access-Control-Allow-Origin: *');
     header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-cache');
+    header("ETag: \"$etag\"");
     echo json_encode([
         'ok' => $ok,
         (($ok) ? 'result' : 'error') => $data,
@@ -367,6 +383,17 @@ function sendResult($data, $ok = true, $code = 200, $exitCode = 0){
         exit($exitCode);
     }
 }
+
+// вычислить etag
+function makeETag(){
+    // etag равен индексу последнего добавления данных
+    // при любых изменениях в расписании это значение изменится
+    // информация о преподавателях обновляется независимо от расписания, но эти обновления не имеют смысла без обновления расписания
+    $res = mustQuery('select max(id) as last_insertion_id from insertions');
+
+    return (string)$res[0]['last_insertion_id'];
+}
+
 
 function evalStringDate($stringDate){
     if(date_create($stringDate) === false){
