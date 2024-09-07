@@ -21,7 +21,7 @@ defineExpose({
             throw new Error('Необходимо выбрать одну из групп в списке');
         }
 
-        const groupInfo = groups[selectedGroup.value.originalIndex]
+        const groupInfo = filteredGroupsInfo.value[selectedGroup.value.originalIndex]
 
         return api.getPairs({
             date,
@@ -36,7 +36,7 @@ defineExpose({
             return 'Расписание'
         }
 
-        const groupInfo = groups[selectedGroup.value.originalIndex]
+        const groupInfo = filteredGroupsInfo.value[selectedGroup.value.originalIndex]
 
         return `${groupInfo.facultyName}, ${groupInfo.name} группа`
     },
