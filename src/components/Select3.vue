@@ -43,13 +43,17 @@ const filtered = computed(() => {
     tempDatalist = tempDatalist.filter(item => item.value.toLocaleLowerCase('ru').includes(lowerCaseQuery));
 
     // сортировка по месту вхождения подстроки, чтобы первыми оказались строки, в которых слова начинаются с запроса от пользователя
-    const re = new RegExp(`(\\b)${escapeRegExp(query.value)}`, 'i')
+    const re = new RegExp(`(?<=\\s)${escapeRegExp(query.value)}`, 'i')
     tempDatalist.sort((a, b) => {
         const searchA = a.value.search(re)
         const searchB = b.value.search(re)
 
         if (searchA >= 0 && searchB >= 0) {
             return searchA - searchB
+        }
+
+        if (searchA === -1 && searchB === -1) {
+            return 0
         }
 
         if (searchA === -1) {
