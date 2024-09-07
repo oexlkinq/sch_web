@@ -8,9 +8,7 @@ import { loadFontAsBase64, fonts } from './utils/fonts';
 import { State } from './utils/state';
 
 
-// TODO: приложить сюда мозг. мб есть более хороший способ организовать это
-const useLocalApi = false;
-const api = new Api((import.meta.env.PROD || !useLocalApi) ? window.location.protocol + '//shgpi.edu.ru/sch_api/index.php': 'http://localhost/sch_api/index.php');
+const api = new Api(import.meta.env.VITE_CUSTOM_SCH_API ?? (window.location.protocol + '//shgpi.edu.ru/sch_api/index.php'));
 provide('api', api);
 
 const state = new State<{
