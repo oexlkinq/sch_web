@@ -94,12 +94,16 @@ function selectIndex(index: number, isTrusted: boolean) {
 }
 
 // функция для сброса выделения
-function reset() {
+function reset(isTrusted = false) {
     query.value = ''
 
     // сбросить текущее выделение
     selection.value = undefined
     emit('update:selection', undefined)
+
+    if(isTrusted) {
+        emit('user-input')
+    }
 }
 
 // вызывается при изменении запроса в поле ввода
@@ -146,9 +150,14 @@ defineExpose({
 </script>
 
 <template>
-    <div v-click-outside="() => open = false">
-        <input type="text" class="form-control" ref="inputEl" @click="open = true" @input="oninput" :value="query"
-            :placeholder="props.placeholder">
+    <div v-click-outside="() => open = false" class="wrapper">
+        <input type="text" class="form-control" :class="{clearable: !!query}" ref="inputEl" @click="open = true" @input="oninput"
+:value="query" :placeholder="props.placeholder">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="reset-input"
+            viewBox="0 0 16 16" @click="reset(true)" v-show="!!query">
+            <path
+                d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708" />
+        </svg>
         <div ref="floating" class="list-group floating" :style="floatingStyles" v-show="open">
             <button v-for="item in filtered" class="list-group-item" @click="selectIndex(item.index, true)">
                 {{ item.value }}
@@ -162,5 +171,23 @@ defineExpose({
     z-index: 1;
     max-height: 400px;
     overflow-y: scroll;
+}
+
+.wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.reset-input {
+    background: none;
+    outline: none;
+    border: none;
+    cursor: pointer;
+}
+
+.clearable {
+    padding-right: 24px;
+    margin-right: -26px;
 }
 </style>
