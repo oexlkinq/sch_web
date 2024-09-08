@@ -92,7 +92,7 @@ const groups = datalist.flatMap((facultyItem, facultyIndex) => {
 // список с информацией о группах текущего факультета. зависит от selectedFaculty
 const filteredGroupsInfo = computed(() => {
     // по умолчанию брать все группы из всех факультетов
-    let list = groups.map((group, originalIndex) => ({...group, originalIndex }))
+    let list = groups.map((group, originalIndex) => ({ ...group, originalIndex }))
 
     // если факультет выбран, то взять его список групп
     if (selectedFaculty.value) {
@@ -112,7 +112,19 @@ watch(selectedGroup, () => {
     // если искали по группе не выбрав факультет, найти его по группе
     if (!selectedFaculty.value && selectedGroup.value) {
         const facultyIndex = filteredGroupsInfo.value[selectedGroup.value.index].facultyIndex
-        
+        const groupIndex = selectedGroup.value.index
+
+        // как только найденный факультет будет применён, список групп изменится. найти новый индекс по имени группы и применить его
+        watch(selectedFaculty, () => {
+            const newGroupIndex = filteredGroupsInfo.value.findIndex(group => group.originalIndex === groupIndex)
+
+            if (newGroupIndex === -1) {
+                groupSelect.value?.reset()
+            } else {
+                groupSelect.value?.selectIndex(newGroupIndex, false)
+            }
+        }, { once: true, flush: 'post' })
+
         // сменить выбранный факультет. isTrusted = false не позволит сгенерировать событие user-input, что вызовет сброс группы и зациклит обновления
         facultySelect.value?.selectIndex(facultyIndex, false)
     }
