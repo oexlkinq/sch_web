@@ -4,6 +4,11 @@ import { useFloating, size, autoUpdate } from '@floating-ui/vue';
 
 import { escapeRegExp, vClickOutside } from '../utils/utils';
 
+defineExpose({
+    selectIndex,
+    reset,
+})
+
 type valueType = string
 type datalist = valueType[];
 export type selection = {
@@ -43,28 +48,24 @@ const filtered = computed(() => {
     tempDatalist = tempDatalist.filter(item => item.value.toLocaleLowerCase('ru').includes(lowerCaseQuery));
 
     // сортировка по месту вхождения подстроки, чтобы первыми оказались строки, в которых слова начинаются с запроса от пользователя
-    const re = new RegExp(`(?<=\\s)${escapeRegExp(query.value)}`, 'i')
+    const re = new RegExp(`(?<=\\s|^)${escapeRegExp(query.value)}`, 'i')
     tempDatalist.sort((a, b) => {
         const searchA = a.value.search(re)
         const searchB = b.value.search(re)
 
-        if (searchA >= 0 && searchB >= 0) {
+        if (searchA > 0 && searchB > 0) {
             return searchA - searchB
         }
-
-        if (searchA === -1 && searchB === -1) {
-            return 0
-        }
-
+        
         if (searchA === -1) {
             return 1
         }
-
+        
         if (searchB === -1) {
             return -1
         }
 
-        return a.value.localeCompare(b.value, 'ru')
+        return 0
     });
 
     return tempDatalist;
@@ -80,7 +81,7 @@ function selectIndex(index: number, isTrusted: boolean) {
     query.value = item
 
     selection.value = {
-        index: index,
+        index,
         value: item,
     }
     emit('update:selection', selection.value)
@@ -142,18 +143,13 @@ const { floatingStyles } = useFloating(inputEl, floating, {
     ],
     whileElementsMounted: autoUpdate,
 });
-
-defineExpose({
-    selectIndex,
-    reset,
-})
 </script>
 
 <template>
     <div v-click-outside="() => open = false" class="wrapper">
         <input type="text" class="form-control" :class="{clearable: !!query}" ref="inputEl" @click="open = true" @input="oninput"
-:value="query" :placeholder="props.placeholder">
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="reset-input"
+            :value="query" :placeholder="props.placeholder">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="reset-input"
             viewBox="0 0 16 16" @click="reset(true)" v-show="!!query">
             <path
                 d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708" />
