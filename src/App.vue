@@ -17,6 +17,8 @@ const state = new State<{
 	week: boolean,
 
 	teacherIndex: number | undefined,
+	searchMode: boolean,
+	searchQuery: string,
 	facultyIndex: number | undefined,
 	groupIndex: number | undefined,
 }>('state', {
@@ -25,6 +27,8 @@ const state = new State<{
 	week: true,
 
 	teacherIndex: undefined,
+	searchMode: false,
+	searchQuery: '',
 	facultyIndex: undefined,
 	groupIndex: undefined,
 })
@@ -40,7 +44,6 @@ const diary = ref(state.data.diary);
 
 
 import group from './components/cps/group.vue';
-import query from './components/cps/query.vue';
 import teacher from './components/cps/teacher.vue';
 
 const cps = [
@@ -52,14 +55,10 @@ const cps = [
 		title: 'Для преподавателей',
 		component: teacher,
 	},
-	// {
-	// 	title: 'Поиск',
-	// 	component: query,
-	// },
 ];
 
 
-const cp = ref<InstanceType<typeof group> | InstanceType<typeof teacher> | InstanceType<typeof query>>();
+const cp = ref<InstanceType<typeof group> | InstanceType<typeof teacher>>();
 const currentCpIndex = ref(state.data.cpIndex);
 
 
@@ -208,15 +207,17 @@ async function makePdf() {
 	</div>
 </template>
 
-<style scoped>
+<style>
 .checkbox-label {
 	display: flex;
 	margin: 0;
-	line-height: 40px;
+	line-height: 34px;
 }
-.checkbox {
+.checkbox-label .checkbox {
 	margin: 0 6px 0 0;
 }
+</style>
+<style scoped>
 
 #scheduleBody {
 	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
