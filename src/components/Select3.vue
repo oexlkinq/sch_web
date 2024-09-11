@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useFloating, size, autoUpdate } from '@floating-ui/vue';
 
 import { escapeRegExp, vClickOutside } from '../utils/utils';
@@ -19,17 +19,21 @@ export type selection = {
 const props = withDefaults(defineProps<{
     datalist?: datalist,
     placeholder?: string,
+    query?: string,
 }>(), {
     datalist: () => [] as datalist,
     placeholder: '',
+    query: '',
 });
 
 const emit = defineEmits<{
     'update:selection': [selection: selection | undefined],
+    'update:query': [query: string]
     'user-input': [],
 }>();
 
-const query = ref('')
+const query = ref(props.query)
+watch(query, () => emit('update:query', query.value))
 
 /** список значений, в которых найден запрос от пользователя. зависит от query и props.datalist */
 const filtered = computed(() => {
@@ -56,11 +60,11 @@ const filtered = computed(() => {
         if (searchA > 0 && searchB > 0) {
             return searchA - searchB
         }
-        
+
         if (searchA === -1) {
             return 1
         }
-        
+
         if (searchB === -1) {
             return -1
         }
@@ -102,7 +106,9 @@ function reset(isTrusted = false) {
     selection.value = undefined
     emit('update:selection', undefined)
 
-    if(isTrusted) {
+    if (isTrusted) {
+        inputEl.value?.focus()
+
         emit('user-input')
     }
 }
@@ -147,8 +153,8 @@ const { floatingStyles } = useFloating(inputEl, floating, {
 
 <template>
     <div v-click-outside="() => open = false" class="wrapper">
-        <input type="text" class="form-control" :class="{clearable: !!query}" ref="inputEl" @click="open = true" @input="oninput"
-            :value="query" :placeholder="props.placeholder">
+        <input type="text" class="form-control" :class="{ clearable: !!query }" ref="inputEl" @focus="open = true"
+            @input="oninput" :value="query" :placeholder="props.placeholder">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="reset-input"
             viewBox="0 0 16 16" @click="reset(true)" v-show="!!query">
             <path
