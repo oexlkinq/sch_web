@@ -9,7 +9,7 @@ const api = inject<Api>('api');
 if (!api) {
     throw new Error('Api is undefined');
 }
-const state = inject<stateType>('state')
+const state = await inject<stateType>('state')
 if (!state) {
     throw new Error('State is undefined')
 }

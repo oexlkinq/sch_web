@@ -11,7 +11,7 @@ import { State } from './utils/state';
 const api = new Api(import.meta.env.VITE_CUSTOM_SCH_API ?? (window.location.protocol + '//shgpi.edu.ru/sch_api/index.php'));
 provide('api', api);
 
-const state = new State<{
+const rawState = new State<{
 	cpIndex: number,
 	diary: boolean,
 	week: boolean,
@@ -32,19 +32,22 @@ const state = new State<{
 	facultyIndex: undefined,
 	groupIndex: undefined,
 })
+const state = fixState(api, rawState)
 provide('state', state)
+export type rawStateType = typeof rawState
 export type stateType = typeof state
 
 
 const date = ref((new Date()).toLocaleDateString('en-ca'));
-const week = ref(state.data.week);
+const week = ref(rawState.data.week);
 const schedule = ref<Day[]>();
 const scheduleTitle = ref<string>();
-const diary = ref(state.data.diary);
+const diary = ref(rawState.data.diary);
 
 
 import group from './components/cps/group.vue';
 import teacher from './components/cps/teacher.vue';
+import { fixState } from './utils/migration';
 
 const cps = [
 	{
@@ -59,7 +62,7 @@ const cps = [
 
 
 const cp = ref<InstanceType<typeof group> | InstanceType<typeof teacher>>();
-const currentCpIndex = ref(state.data.cpIndex);
+const currentCpIndex = ref(rawState.data.cpIndex);
 
 
 const loading = ref(false);
@@ -83,9 +86,9 @@ async function updateRes() {
 		scheduleTitle.value = cp.value.titleGenerator();
 
 		cp.value.saveState();
-		state.data.diary = diary.value;
-		state.data.cpIndex = currentCpIndex.value;
-		state.data.week = week.value
+		rawState.data.diary = diary.value;
+		rawState.data.cpIndex = currentCpIndex.value;
+		rawState.data.week = week.value
 	} catch (e) {
 		console.error(e);
 		error.value = String(e);
