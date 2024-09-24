@@ -39,9 +39,3 @@ body {
 .w-100 {
 	width: 100%;
 }
-
-.center-children {
-	display: flex;
-	justify-content: center;
-	align-content: center;
-}

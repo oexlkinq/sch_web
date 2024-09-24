@@ -4,28 +4,12 @@ import Select3, { selection } from '../Select3.vue';
 import { Api } from '../../utils/api';
 import { stateType } from '../../App.vue';
 
-const api = inject<Api>('api');
-if (!api) {
-    throw new Error('Api is undefined');
-}
-const state = await inject<stateType>('state')
-if (!state) {
-    throw new Error('State is undefined')
-}
-
-const teacherSelect = ref<InstanceType<typeof Select3>>()
-const selectedTeacher = ref<selection>();
-onMounted(() => {
-    if (teacherSelect.value && state.data.teacherIndex) {
-        teacherSelect.value.selectIndex(state.data.teacherIndex, false)
-    }
-})
-
-const searchMode = ref(state.data.searchMode)
-const query = ref(state.data.searchQuery)
-
 defineExpose({
     fetcher(date: string, week: boolean) {
+        if (!api) {
+            throw new Error('Приложение загружается. Попробуйте ещё раз позже')
+        }
+
         if (searchMode.value) {
             if (!query.value) {
                 throw new Error('Запрос пуст')
@@ -75,11 +59,35 @@ defineExpose({
         teacherSelect.value?.reset()
     },
     saveState() {
+        if (!state) {
+            throw new Error('Приложение загружается. Попробуйте ещё раз позже')
+        }
+
         state.data.teacherIndex = selectedTeacher.value?.index;
         state.data.searchMode = searchMode.value
         state.data.searchQuery = query.value
     },
 });
+
+const api = inject<Api>('api');
+if (!api) {
+    throw new Error('Api is undefined');
+}
+const state = await inject<stateType>('state')
+if (!state) {
+    throw new Error('State is undefined')
+}
+
+const teacherSelect = ref<InstanceType<typeof Select3>>()
+const selectedTeacher = ref<selection>();
+onMounted(() => {
+    if (teacherSelect.value && state.data.teacherIndex) {
+        teacherSelect.value.selectIndex(state.data.teacherIndex, false)
+    }
+})
+
+const searchMode = ref(state.data.searchMode)
+const query = ref(state.data.searchQuery)
 
 
 const datalist = await api.getTeachers();
@@ -92,12 +100,15 @@ const teacherNames = teachers.map(teacher => teacher.name)
 </script>
 
 <template>
-    <div class="col-xs-12 col-md-9">
-        <Select3 v-show="searchMode" placeholder="Поисковый запрос" v-model:query="query" />
-        <Select3 v-show="!searchMode" :datalist="teacherNames" v-model:selection="selectedTeacher" placeholder="ФИО преподавателя"
-            ref="teacherSelect" />
-    </div>
-    <div class="col-xs-12 col-md-3">
-        <label class="checkbox-label"><input type="checkbox" v-model="searchMode" class="checkbox">Свободный поиск</label>
+    <div class="row align-items-center">
+        <div class="col-xs-12 col-lg-9">
+            <Select3 v-show="searchMode" placeholder="Поисковый запрос" v-model:query="query" />
+            <Select3 v-show="!searchMode" :datalist="teacherNames" v-model:selection="selectedTeacher"
+                placeholder="ФИО преподавателя" ref="teacherSelect" />
+        </div>
+        <div class="col-xs-12 col-lg-3">
+            <label class="checkbox-label"><input type="checkbox" v-model="searchMode" class="checkbox">Свободный
+                поиск</label>
+        </div>
     </div>
 </template>

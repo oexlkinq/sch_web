@@ -5,17 +5,12 @@ import { Api } from '../../utils/api';
 import { stateType } from '../../App.vue';
 
 
-const api = inject<Api>('api');
-if (!api) {
-    throw new Error('Api is undefined');
-}
-const state = await inject<stateType>('state')
-if (!state) {
-    throw new Error('State is undefined')
-}
-
 defineExpose({
     fetcher: (date: string, week: boolean) => {
+        if (!api) {
+            throw new Error('Приложение загружается. Попробуйте ещё раз позже')
+        }
+
         if (!selectedGroup.value) {
             // TODO: подсвечивать поле ввода вместо ошибки
             throw new Error('Необходимо выбрать одну из групп в списке');
@@ -45,10 +40,24 @@ defineExpose({
         facultySelect.value?.reset()
     },
     saveState: () => {
+        if (!state) {
+            throw new Error('Приложение загружается. Попробуйте ещё раз позже')
+        }
+
         state.data.facultyIndex = selectedFaculty.value?.index;
         state.data.groupIndex = selectedGroup.value?.index;
     },
 });
+
+
+const api = inject<Api>('api');
+if (!api) {
+    throw new Error('Api is undefined');
+}
+const state = await inject<stateType>('state')
+if (!state) {
+    throw new Error('State is undefined')
+}
 
 // TODO: добавить событие обновления полей ввода, чтобы чистить переменную schedule снаружи
 
@@ -138,12 +147,14 @@ function resetGroup() {
 </script>
 
 <template>
-    <div class="col-xs-12 col-md-9">
-        <Select3 :datalist="faculties" v-model:selection="selectedFaculty" ref="facultySelect" @user-input="resetGroup"
-            placeholder="Институт, факультет, колледж" />
-    </div>
-
-    <div class="col-xs-12 col-md-3">
-        <Select3 :datalist="groupNames" v-model:selection="selectedGroup" ref="groupSelect" placeholder="Группа" />
+    <div class="row align-items-center">
+        <div class="col-xs-12 col-lg-9">
+            <Select3 :datalist="faculties" v-model:selection="selectedFaculty" ref="facultySelect" @user-input="resetGroup"
+                placeholder="Институт, факультет, колледж" />
+        </div>
+    
+        <div class="col-xs-12 col-lg-3">
+            <Select3 :datalist="groupNames" v-model:selection="selectedGroup" ref="groupSelect" placeholder="Группа" />
+        </div>
     </div>
 </template>

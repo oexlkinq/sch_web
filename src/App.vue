@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { provide, ref } from 'vue';
+import { computed, provide, ref } from 'vue';
 import { Api, Day } from './utils/api';
 import Schedule from './components/Schedule.vue';
 
@@ -129,60 +129,109 @@ async function makePdf() {
 		makePdfState.value = 'idle';
 	}
 }
+
+/** реф для хранения ширины окна */
+const windowWidth = ref(window.innerWidth)
+// обновлять реф с шириной окна при изменении размеров окна
+window.addEventListener('resize', () => {
+	windowWidth.value = window.innerWidth
+})
+/** computed boolean. true если ширина экрана больше 1200 */
+const isWideScreen = computed(() => windowWidth.value >= 1200)
 </script>
 
 <template>
-	<div class="container-fluid">
-		<div class="row align-items-center p-slim row-main">
-			<div class="col-xs-12 col-lg-3">
-				<div class="row">
-					<div class="col-xs-12 col-md-12" v-for="(cp, i) in cps">
-						<button :class="{ 'active': currentCpIndex === i }" class="btn toggle"
-							@click="currentCpIndex = i">{{ cp.title }}</button>
-					</div>
+	<div class="container-fluid mt-1">
+		<template v-if="isWideScreen">
+			<!-- верхняя строка -->
+			<div class="row desktop align-items-center">
+				<div class="col-lg-3">
+					<button :class="{ 'active': currentCpIndex === 0 }" class="btn toggle custom"
+						@click="currentCpIndex = 0">{{ cps[0].title }}</button>
 				</div>
-			</div>
-
-			<div class="col-xs-12 col-lg-7 mid-col">
-				<div class="row">
+	
+				<div class="col-lg-7">
 					<KeepAlive>
 						<Suspense>
 							<component :is="cps[currentCpIndex].component" ref="cp" />
-
+	
 							<template #fallback>
-								<div class="center-children">
+								<div class="justify-content-center">
 									<span class="spinner-border"></span>
 								</div>
 							</template>
 						</Suspense>
 					</KeepAlive>
 				</div>
-
-				<div class="row">
-					<div class="col-xs-12">
-						<button @click="updateRes" class="btn btn-primary w-100" :disabled="loading">
-							<div class="spinner-border spinner-border-sm" v-if="loading"></div>
-							Показать
-						</button>
-					</div>
+	
+				<div class="col-lg-2">
+					<input type="date" v-model="date" class="form-control">
 				</div>
 			</div>
-
-			<div class="col-xs-12 col-md-12 col-lg-2 end-col">
-				<div class="row">
-					<div class="col-xs-12 col-md-6 col-lg-12">
-						<input type="date" v-model="date" class="form-control">
-					</div>
+	
+			<!-- нижняя строка -->
+			<div class="row desktop align-items-center">
+				<div class="col-lg-3">
+					<button :class="{ 'active': currentCpIndex === 1 }" class="btn toggle custom"
+						@click="currentCpIndex = 1">{{ cps[1].title }}</button>
 				</div>
-				<div class="row">
-					<div class="col-xs-12 col-md-6 col-lg-12">
-						<label class="checkbox-label"><input type="checkbox" v-model="week" class="checkbox">На всю неделю</label>
-						<!-- <label class="checkbox-label"><input type="checkbox" v-model="diary" class="checkbox">Дневник</label> -->
-					</div>
+	
+				<div class="col-lg-7">
+					<button @click="updateRes" class="btn btn-primary custom w-100" :disabled="loading">
+						<div class="spinner-border spinner-border-sm" v-if="loading"></div>
+						Показать
+					</button>
+				</div>
+	
+				<div class="col-lg-2">
+					<label class="checkbox-label"><input type="checkbox" v-model="week" class="checkbox">На всю неделю</label>
+					<!-- <label class="checkbox-label"><input type="checkbox" v-model="diary" class="checkbox">Дневник</label> -->
 				</div>
 			</div>
-		</div>
+		</template>
 
+		<template v-if="!isWideScreen">
+			<div class="row mobile">
+				<div class="col-xs-12">
+					<button :class="{ 'active': currentCpIndex === 0 }" class="btn toggle custom"
+						@click="currentCpIndex = 0">{{ cps[0].title }}</button>
+					<button :class="{ 'active': currentCpIndex === 1 }" class="btn toggle custom"
+						@click="currentCpIndex = 1">{{ cps[1].title }}</button>
+				</div>
+	
+				<div class="col-xs-12">
+					<KeepAlive>
+						<Suspense>
+							<component :is="cps[currentCpIndex].component" ref="cp" />
+	
+							<template #fallback>
+								<div class="justify-content-center">
+									<span class="spinner-border"></span>
+								</div>
+							</template>
+						</Suspense>
+					</KeepAlive>
+				</div>
+	
+				<div class="col-xs-12">
+					<input type="date" v-model="date" class="form-control">
+				</div>
+	
+				<div class="col-xs-12">
+					<label class="checkbox-label"><input type="checkbox" v-model="week" class="checkbox">На всю неделю</label>
+					<!-- <label class="checkbox-label"><input type="checkbox" v-model="diary" class="checkbox">Дневник</label> -->
+				</div>
+
+				<div class="col-xs-12">
+					<button @click="updateRes" class="btn btn-primary custom w-100" :disabled="loading">
+						<div class="spinner-border spinner-border-sm" v-if="loading"></div>
+						Показать
+					</button>
+				</div>
+			</div>
+		</template>
+
+		<!-- блок расписания -->
 		<template v-if="schedule && schedule.length > 0">
 			<div id="scheduleBody">
 				<h3 v-html="scheduleTitle"></h3>
@@ -190,19 +239,19 @@ async function makePdf() {
 				<Schedule :days="schedule" :diary="diary"/>
 			</div>
 
-			<button class="btn btn-primary w-100" @click="makePdf">
+			<button class="btn btn-primary custom w-100" @click="makePdf">
 				<span class="spinner-border spinner-border-sm" v-if="makePdfState === 'processing'"></span>
 				Сохранить
 			</button>
 		</template>
 
-		<div class="row" v-else-if="schedule && schedule.length === 0">
+		<div class="row mt-1" v-else-if="schedule && schedule.length === 0">
 			<div class="col-xs-12">
 				<p class="bg-danger alert">Расписание не найдено</p>
 			</div>
 		</div>
 
-		<div class="row" v-else-if="error">
+		<div class="row mt-1" v-else-if="error">
 			<div class="col-xs-12">
 				<p class="bg-danger alert">{{ error }}</p>
 			</div>
@@ -214,14 +263,30 @@ async function makePdf() {
 .checkbox-label {
 	display: flex;
 	margin: 0;
-	line-height: 34px;
 }
 .checkbox-label .checkbox {
 	margin: 0 6px 0 0;
 }
+.mobile .checkbox-label {
+	margin-top: 6px;
+	margin-bottom: 6px;
+}
+
+.desktop .align-items-center, .desktop.align-items-center {
+	display: flex;
+	align-items: center;
+}
+.desktop .justify-content-center {
+	display: flex;
+	justify-content: center;
+}
+
+.mobile input {
+	margin-top: 2px;
+	margin-bottom: 2px;
+}
 </style>
 <style scoped>
-
 #scheduleBody {
 	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
@@ -229,57 +294,29 @@ async function makePdf() {
 	text-align: center;
 }
 
-.row {
-	margin-top: 0.5rem;
-	margin-bottom: 0.5rem;
-}
-
-@media (min-width: 1200px) {
-	.align-items-center {
-		display: flex;
-		align-items: center;
-	}
-}
-
-@media (min-width: 1600px) {
-	.end-col {
-		width: 16%;
-	}
-}
-
-@media (max-width: 1600px) {
-	.end-col {
-		width: 20%;
-	}
-}
-
-@media (max-width: 1200px) {
-	.end-col {
-		width: 100%;
-	}
-}
-
 .toggle {
 	width: 100%;
 	color: #000;
 }
-
 .toggle.active {
-	background-color: var(--shspu-color-dark) !important;
+	background-color: var(--shspu-color-dark);
 	color: white;
 }
 
-.btn-primary {
-	background-color: var(--shspu-color-dark) !important;
-}
-
-.btn-primary:hover {
-	background-color: var(--shspu-color-dark-shadow) !important;
-}
-
-.btn {
+.btn.custom {
 	border-radius: 0;
 	padding: 10px;
 	border: none;
+}
+
+.btn-primary.custom {
+	background-color: var(--shspu-color-dark);
+}
+.btn-primary.custom:hover {
+	background-color: var(--shspu-color-dark-shadow);
+}
+
+.mt-1 {
+	margin-top: 1rem;
 }
 </style>
