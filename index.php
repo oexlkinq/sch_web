@@ -374,6 +374,7 @@ function sendResult($data, $ok = true, $code = 200, $exitCode = 0){
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-cache');
     header("ETag: \"$etag\"");
+    http_response_code($code);
     echo json_encode([
         'ok' => $ok,
         (($ok) ? 'result' : 'error') => $data,
@@ -396,7 +397,9 @@ function makeETag(){
 
 
 function evalStringDate($stringDate){
-    if(date_create($stringDate) === false){
+    $matchTry = preg_match('/\d{4}-\d{2}-\d{2}/', $stringDate);
+    $createTry = date_create($stringDate);
+    if($matchTry === false || $createTry === false){
         throw new ErrorException('неверный формат даты');
     }
 
