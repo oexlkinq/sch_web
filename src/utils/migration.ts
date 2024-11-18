@@ -1,7 +1,7 @@
+import { SchApi } from "node-sch-api";
 import { rawStateType } from "../App.vue";
-import { Api } from "./api";
 
-export async function fixState(api: Api, state: rawStateType) {
+export async function fixState(api: SchApi, state: rawStateType) {
     const rawCurrentCpIndex = getItem('currentCpIndex')
     if (!rawCurrentCpIndex) {
         return state
@@ -25,7 +25,7 @@ export async function fixState(api: Api, state: rawStateType) {
         }
         const groupId = JSON.parse(rawGroupId) as number
     
-        const groups = await api.getGroups()
+        const groups = await api.groups.get()
         const groupIndex = groups[facultyIndex].groups.findIndex(group => group.id === groupId)
         if (groupIndex === -1) {
             return state
@@ -39,7 +39,7 @@ export async function fixState(api: Api, state: rawStateType) {
     if(rawTeacherId) {
         const teacherId = JSON.parse(rawTeacherId) as number
     
-        const teachers = await api.getTeachers()
+        const teachers = await api.teachers.get()
         const teacherIndex = teachers.findIndex(teacher => teacher.id === teacherId)
         if(teacherIndex === -1) {
             return state

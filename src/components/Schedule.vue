@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Day } from '../utils/api';
+import { Day } from 'node-sch-api';
 import { formatDate, times } from '../utils/utils';
 
 const props = defineProps<{
