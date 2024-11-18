@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { computed, provide, ref } from 'vue';
-import { Api, Day } from './utils/api';
+import { api } from './utils/api';
+import { Day } from 'node-sch-api';
+
 import Schedule from './components/Schedule.vue';
 
 import { jsPDF } from 'jspdf';
 import { loadFontAsBase64, fonts } from './utils/fonts';
 import { State } from './utils/state';
+import { fixState } from './utils/migration';
 
+import group from './components/cps/group.vue';
+import teacher from './components/cps/teacher.vue';
 
-const api = new Api(import.meta.env.VITE_CUSTOM_SCH_API ?? (window.location.protocol + '//shgpi.edu.ru/sch_api/index.php'));
-provide('api', api);
 
 const rawState = new State<{
 	cpIndex: number,
@@ -44,10 +47,6 @@ const schedule = ref<Day[]>();
 const scheduleTitle = ref<string>();
 const diary = ref(rawState.data.diary);
 
-
-import group from './components/cps/group.vue';
-import teacher from './components/cps/teacher.vue';
-import { fixState } from './utils/migration';
 
 const cps = [
 	{

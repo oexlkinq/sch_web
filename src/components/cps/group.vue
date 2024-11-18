@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref, watch } from 'vue';
 import Select3, { selection } from '../Select3.vue';
-import { Api } from '../../utils/api';
+import { api } from '../../utils/api';
 import { stateType } from '../../App.vue';
 
 
@@ -18,8 +18,8 @@ defineExpose({
 
         const groupInfo = filteredGroupsInfo.value[selectedGroup.value.index]
 
-        return api.getPairs({
-            date,
+        return api.pairs.get({
+            date: new Date(date),
             week,
             groupId: groupInfo.id,
         });
@@ -50,10 +50,6 @@ defineExpose({
 });
 
 
-const api = inject<Api>('api');
-if (!api) {
-    throw new Error('Api is undefined');
-}
 const state = await inject<stateType>('state')
 if (!state) {
     throw new Error('State is undefined')
@@ -61,7 +57,7 @@ if (!state) {
 
 // TODO: добавить событие обновления полей ввода, чтобы чистить переменную schedule снаружи
 
-const datalist = await api.getGroups();
+const datalist = await api.groups.get();
 
 const facultySelect = ref<InstanceType<typeof Select3>>()
 const groupSelect = ref<InstanceType<typeof Select3>>()

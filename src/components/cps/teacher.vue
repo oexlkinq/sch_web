@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject, onMounted, ref } from 'vue';
 import Select3, { selection } from '../Select3.vue';
-import { Api } from '../../utils/api';
+import { api } from '../../utils/api';
 import { stateType } from '../../App.vue';
 
 defineExpose({
@@ -15,8 +15,8 @@ defineExpose({
                 throw new Error('Запрос пуст')
             }
 
-            return api.getPairs({
-                date,
+            return api.pairs.get({
+                date: new Date(date),
                 week,
                 query: query.value,
             })
@@ -27,8 +27,8 @@ defineExpose({
 
             const teacher = teachers[selectedTeacher.value.index]
 
-            return api.getPairs({
-                date,
+            return api.pairs.get({
+                date: new Date(date),
                 week,
                 teacherId: teacher.id,
             });
@@ -69,10 +69,6 @@ defineExpose({
     },
 });
 
-const api = inject<Api>('api');
-if (!api) {
-    throw new Error('Api is undefined');
-}
 const state = await inject<stateType>('state')
 if (!state) {
     throw new Error('State is undefined')
@@ -90,7 +86,7 @@ const searchMode = ref(state.data.searchMode)
 const query = ref(state.data.searchQuery)
 
 
-const datalist = await api.getTeachers();
+const datalist = await api.teachers.get();
 const teachers = datalist.map((teacher, originalIndex) => ({
     id: teacher.id,
     name: teacher.name,
