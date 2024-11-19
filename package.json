@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "node-sch-api": "http://gitea.shgpi/vc/-/packages/npm/node-sch-api/2.1.4/files/16",
+    "node-sch-api": "http://gitea.shgpi/vc/-/packages/npm/node-sch-api/2.2.0/files/17",
     "vue": "^3.5.13"
   },
   "devDependencies": {
